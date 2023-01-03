@@ -76,7 +76,7 @@ export const UnbanCmd = modActionsCmd({
     }
 
     // Confirm the action
-    sendSuccessMessage(pluginData, msg.channel, `Member unbanned (Case #${createdCase.case_number})`);
+    sendSuccessMessage(pluginData, msg.channel, `**${user.tag}** unbanned (Case #${createdCase.case_number})`);
 
     // Log the action
     pluginData.getPlugin(LogsPlugin).logMemberUnban({
