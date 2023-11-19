@@ -18,7 +18,7 @@ export async function applyFiltersToMsg(
 
   let messageContent = savedMessage.data.content || "";
   if (savedMessage.data.attachments) messageContent += " " + JSON.stringify(savedMessage.data.attachments);
-  if (savedMessage.data.embeds) {
+  if (savedMessage.data.embeds && config.filter_embeds) {
     const embeds = (savedMessage.data.embeds as Embed[]).map((e) => cloneDeep(e));
     for (const embed of embeds) {
       if (embed.type === "video") {

@@ -9,6 +9,7 @@ import { TRegex } from "../../validatorUtils";
 export const ConfigSchema = t.type({
   filter_zalgo: t.boolean,
   filter_invites: t.boolean,
+  filter_embeds: t.boolean,
   invite_guild_whitelist: tNullable(t.array(t.string)),
   invite_guild_blacklist: tNullable(t.array(t.string)),
   invite_code_whitelist: tNullable(t.array(t.string)),

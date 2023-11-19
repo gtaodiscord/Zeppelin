@@ -14,6 +14,7 @@ const defaultOptions: PluginOptions<CensorPluginType> = {
   config: {
     filter_zalgo: false,
     filter_invites: false,
+    filter_embeds: false,
     invite_guild_whitelist: null,
     invite_guild_blacklist: null,
     invite_code_whitelist: null,
