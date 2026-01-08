@@ -1,13 +1,14 @@
-import { getRepository, Repository } from "typeorm";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { StarboardMessage } from "./entities/StarboardMessage";
+import { Repository } from "typeorm";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { dataSource } from "./dataSource.js";
+import { StarboardMessage } from "./entities/StarboardMessage.js";
 
 export class GuildStarboardMessages extends BaseGuildRepository {
   private allStarboardMessages: Repository<StarboardMessage>;
 
   constructor(guildId) {
     super(guildId);
-    this.allStarboardMessages = getRepository(StarboardMessage);
+    this.allStarboardMessages = dataSource.getRepository(StarboardMessage);
   }
 
   async getStarboardMessagesForMessageId(messageId: string) {

@@ -1,15 +1,16 @@
 import moment from "moment-timezone";
-import { getRepository, Repository } from "typeorm";
-import { DBDateFormat } from "../utils";
-import { BaseRepository } from "./BaseRepository";
-import { VCAlert } from "./entities/VCAlert";
+import { Repository } from "typeorm";
+import { DBDateFormat } from "../utils.js";
+import { BaseRepository } from "./BaseRepository.js";
+import { dataSource } from "./dataSource.js";
+import { VCAlert } from "./entities/VCAlert.js";
 
 export class VCAlerts extends BaseRepository {
   private allAlerts: Repository<VCAlert>;
 
   constructor() {
     super();
-    this.allAlerts = getRepository(VCAlert);
+    this.allAlerts = dataSource.getRepository(VCAlert);
   }
 
   async getSoonExpiringAlerts(threshold: number): Promise<VCAlert[]> {

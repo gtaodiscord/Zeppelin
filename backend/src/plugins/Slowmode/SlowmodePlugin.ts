@@ -1,31 +1,31 @@
-import { PluginOptions } from "knub";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { GuildSlowmodes } from "../../data/GuildSlowmodes";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { SECONDS } from "../../utils";
-import { LogsPlugin } from "../Logs/LogsPlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { SlowmodeClearCmd } from "./commands/SlowmodeClearCmd";
-import { SlowmodeDisableCmd } from "./commands/SlowmodeDisableCmd";
-import { SlowmodeGetCmd } from "./commands/SlowmodeGetCmd";
-import { SlowmodeListCmd } from "./commands/SlowmodeListCmd";
-import { SlowmodeSetCmd } from "./commands/SlowmodeSetCmd";
-import { ConfigSchema, SlowmodePluginType } from "./types";
-import { clearExpiredSlowmodes } from "./util/clearExpiredSlowmodes";
-import { onMessageCreate } from "./util/onMessageCreate";
+import { guildPlugin } from "vety";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { GuildSlowmodes } from "../../data/GuildSlowmodes.js";
+import { SECONDS } from "../../utils.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { LogsPlugin } from "../Logs/LogsPlugin.js";
+import { SlowmodeClearCmd } from "./commands/SlowmodeClearCmd.js";
+import { SlowmodeDisableCmd } from "./commands/SlowmodeDisableCmd.js";
+import { SlowmodeGetCmd } from "./commands/SlowmodeGetCmd.js";
+import { SlowmodeListCmd } from "./commands/SlowmodeListCmd.js";
+import { SlowmodeSetCmd } from "./commands/SlowmodeSetCmd.js";
+import { SlowmodePluginType, zSlowmodeConfig } from "./types.js";
+import { clearExpiredSlowmodes } from "./util/clearExpiredSlowmodes.js";
+import { onMessageCreate } from "./util/onMessageCreate.js";
 
 const BOT_SLOWMODE_CLEAR_INTERVAL = 60 * SECONDS;
 
-const defaultOptions: PluginOptions<SlowmodePluginType> = {
-  config: {
-    use_native_slowmode: true,
+export const SlowmodePlugin = guildPlugin<SlowmodePluginType>()({
+  name: "slowmode",
 
-    can_manage: false,
-    is_affected: true,
-  },
+  // prettier-ignore
+  dependencies: () => [
+    LogsPlugin,
+  ],
 
-  overrides: [
+  configSchema: zSlowmodeConfig,
+  defaultOverrides: [
     {
       level: ">=50",
       config: {
@@ -34,23 +34,6 @@ const defaultOptions: PluginOptions<SlowmodePluginType> = {
       },
     },
   ],
-};
-
-export const SlowmodePlugin = zeppelinGuildPlugin<SlowmodePluginType>()({
-  name: "slowmode",
-  showInDocs: true,
-  info: {
-    prettyName: "Slowmode",
-    configSchema: ConfigSchema,
-  },
-
-  // prettier-ignore
-  dependencies: () => [
-    LogsPlugin,
-  ],
-
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
 
   // prettier-ignore
   messageCommands: [
@@ -68,6 +51,10 @@ export const SlowmodePlugin = zeppelinGuildPlugin<SlowmodePluginType>()({
     state.savedMessages = GuildSavedMessages.getGuildInstance(guild.id);
     state.logs = new GuildLogs(guild.id);
     state.channelSlowmodeCache = new Map();
+  },
+
+  beforeStart(pluginData) {
+    pluginData.state.common = pluginData.getPlugin(CommonPlugin);
   },
 
   afterLoad(pluginData) {

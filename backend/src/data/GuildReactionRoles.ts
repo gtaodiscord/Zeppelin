@@ -1,13 +1,14 @@
-import { getRepository, Repository } from "typeorm";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { ReactionRole } from "./entities/ReactionRole";
+import { Repository } from "typeorm";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { dataSource } from "./dataSource.js";
+import { ReactionRole } from "./entities/ReactionRole.js";
 
 export class GuildReactionRoles extends BaseGuildRepository {
   private reactionRoles: Repository<ReactionRole>;
 
   constructor(guildId) {
     super(guildId);
-    this.reactionRoles = getRepository(ReactionRole);
+    this.reactionRoles = dataSource.getRepository(ReactionRole);
   }
 
   async all(): Promise<ReactionRole[]> {
@@ -30,7 +31,7 @@ export class GuildReactionRoles extends BaseGuildRepository {
     });
   }
 
-  async getByMessageAndEmoji(messageId: string, emoji: string): Promise<ReactionRole | undefined> {
+  async getByMessageAndEmoji(messageId: string, emoji: string): Promise<ReactionRole | null> {
     return this.reactionRoles.findOne({
       where: {
         guild_id: this.guildId,

@@ -1,8 +1,8 @@
 import escapeStringRegexp from "escape-string-regexp";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { isStaffPreFilter } from "../../../pluginUtils";
-import { createChunkedMessage, getUser, sorter } from "../../../utils";
-import { botControlCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { isStaffPreFilter } from "../../../pluginUtils.js";
+import { createChunkedMessage, getUser, renderUsername, sorter } from "../../../utils.js";
+import { botControlCmd } from "../types.js";
 
 export const ServersCmd = botControlCmd({
   trigger: ["servers", "guilds"],
@@ -24,7 +24,7 @@ export const ServersCmd = botControlCmd({
     const search = args.search ? new RegExp([...args.search].map((s) => escapeStringRegexp(s)).join(".*"), "i") : null;
 
     const joinedGuilds = Array.from(pluginData.client.guilds.cache.values());
-    const loadedGuilds = pluginData.getKnubInstance().getLoadedGuilds();
+    const loadedGuilds = pluginData.getVetyInstance().getLoadedGuilds();
     const loadedGuildsMap = loadedGuilds.reduce((map, guildData) => map.set(guildData.guildId, guildData), new Map());
 
     if (showList) {
@@ -48,7 +48,9 @@ export const ServersCmd = botControlCmd({
         const lines = filteredGuilds.map((g) => {
           const paddedId = g.id.padEnd(longestId, " ");
           const owner = getUser(pluginData.client, g.ownerId);
-          return `\`${paddedId}\` **${g.name}** (${g.memberCount} members) (owner **${owner.tag}** \`${owner.id}\`)`;
+          return `\`${paddedId}\` **${g.name}** (${g.memberCount} members) (owner **${renderUsername(owner)}** \`${
+            owner.id
+          }\`)`;
         });
         createChunkedMessage(msg.channel, lines.join("\n"));
       } else {

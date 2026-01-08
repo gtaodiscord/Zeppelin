@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { z } from "zod";
-import { rootDir } from "./paths";
+import { rootDir } from "./paths.js";
 
 const envType = z.object({
   KEY: z.string().length(32),
@@ -13,7 +13,6 @@ const envType = z.object({
 
   DASHBOARD_URL: z.string().url(),
   API_URL: z.string().url(),
-  API_PORT: z.preprocess((v) => Number(v), z.number().min(1).max(65535)).default(3000),
 
   STAFF: z
     .preprocess(
@@ -38,23 +37,29 @@ const envType = z.object({
     .optional(),
 
   PHISHERMAN_API_KEY: z.string().optional(),
+  FISHFISH_API_KEY: z.string().optional(),
 
-  DOCKER_DEV_MYSQL_PASSWORD: z.string().optional(), // Included here for the DB_PASSWORD default in development
-  DOCKER_PROD_MYSQL_PASSWORD: z.string().optional(), // Included here for the DB_PASSWORD default in production
+  DEFAULT_SUCCESS_EMOJI: z.string().optional().default("✅"),
+  DEFAULT_ERROR_EMOJI: z.string().optional().default("❌"),
 
-  DB_HOST: z.string().optional().default("mysql"),
-  DB_PORT: z
-    .preprocess((v) => Number(v), z.number())
-    .optional()
-    .default(3306),
-  DB_USER: z.string().optional().default("zeppelin"),
-  DB_PASSWORD: z.string().optional(), // Default is set to DOCKER_MYSQL_PASSWORD further below
-  DB_DATABASE: z.string().optional().default("zeppelin"),
+  DB_HOST: z.string().optional(),
+  DB_PORT: z.preprocess((v) => Number(v), z.number()).optional(),
+  DB_USER: z.string().optional(),
+  DB_PASSWORD: z.string().optional(),
+  DB_DATABASE: z.string().optional(),
+
+  REDIS_URL: z.string().default("redis://redis:6379"),
+
+  DEVELOPMENT_MYSQL_PASSWORD: z.string().optional(),
+
+  API_PATH_PREFIX: z.string().optional(),
 
   DEBUG: z
     .string()
     .optional()
     .transform((str) => str === "true"),
+
+  NODE_ENV: z.string().default("development"),
 });
 
 let toValidate = { ...process.env };
@@ -65,11 +70,3 @@ if (fs.existsSync(envPath)) {
 }
 
 export const env = envType.parse(toValidate);
-
-if (!env.DB_PASSWORD) {
-  if (process.env.NODE_ENV === "production" && env.DOCKER_PROD_MYSQL_PASSWORD) {
-    env.DB_PASSWORD = env.DOCKER_PROD_MYSQL_PASSWORD;
-  } else if (env.DOCKER_DEV_MYSQL_PASSWORD) {
-    env.DB_PASSWORD = env.DOCKER_DEV_MYSQL_PASSWORD;
-  }
-}

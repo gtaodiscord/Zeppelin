@@ -1,14 +1,13 @@
-import * as t from "io-ts";
-import { BasePluginType, CooldownManager, guildPluginEventListener } from "knub";
+import { BasePluginType, CooldownManager, guildPluginEventListener } from "vety";
 import { z } from "zod";
-import { RegExpRunner } from "../../RegExpRunner";
-import { GuildArchives } from "../../data/GuildArchives";
-import { GuildCases } from "../../data/GuildCases";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { LogType } from "../../data/LogType";
-import { tMessageContent, tNullable } from "../../utils";
-import { MessageBuffer } from "../../utils/MessageBuffer";
+import { RegExpRunner } from "../../RegExpRunner.js";
+import { GuildArchives } from "../../data/GuildArchives.js";
+import { GuildCases } from "../../data/GuildCases.js";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { LogType } from "../../data/LogType.js";
+import { keys, zBoundedCharacters, zMessageContent, zRegex, zSnowflake } from "../../utils.js";
+import { MessageBuffer } from "../../utils/MessageBuffer.js";
 import {
   TemplateSafeCase,
   TemplateSafeChannel,
@@ -21,55 +20,63 @@ import {
   TemplateSafeUnknownMember,
   TemplateSafeUnknownUser,
   TemplateSafeUser,
-} from "../../utils/templateSafeObjects";
-import { TRegex } from "../../validatorUtils";
+} from "../../utils/templateSafeObjects.js";
+import { TemplateSafeValueContainer } from "../../templateFormatter.js";
+import DefaultLogMessages from "../../data/DefaultLogMessages.json" with { type: "json" };
+import { TemplateSafeValueContainer } from "templateFormatter.js";
 
-export const tLogFormats = t.record(t.string, t.union([t.string, tMessageContent]));
-export type TLogFormats = t.TypeOf<typeof tLogFormats>;
+const DEFAULT_BATCH_TIME = 1000;
+const MIN_BATCH_TIME = 250;
+const MAX_BATCH_TIME = 5000;
 
-const LogChannel = t.partial({
-  include: t.array(t.string),
-  exclude: t.array(t.string),
-  batched: t.boolean,
-  batch_time: t.number,
-  excluded_users: t.array(t.string),
-  excluded_message_regexes: t.array(TRegex),
-  excluded_channels: t.array(t.string),
-  excluded_categories: t.array(t.string),
-  excluded_threads: t.array(t.string),
-  exclude_bots: t.boolean,
-  excluded_roles: t.array(t.string),
-  format: tNullable(tLogFormats),
-  timestamp_format: t.string,
-  include_embed_timestamp: t.boolean,
+// A bit of a workaround so we can pass LogType keys to z.enum()
+const zMessageContentWithDefault = zMessageContent.default("");
+const logTypes = keys(LogType);
+const logTypeProps = logTypes.reduce(
+  (map, type) => {
+    map[type] = zMessageContent.default(DefaultLogMessages[type] || "");
+    return map;
+  },
+  {} as Record<keyof typeof LogType, typeof zMessageContentWithDefault>,
+);
+const zLogFormats = z.strictObject(logTypeProps);
+
+const zLogChannel = z.strictObject({
+  include: z.array(zBoundedCharacters(1, 255)).default([]),
+  exclude: z.array(zBoundedCharacters(1, 255)).default([]),
+  batched: z.boolean().default(true),
+  batch_time: z.number().min(MIN_BATCH_TIME).max(MAX_BATCH_TIME).default(DEFAULT_BATCH_TIME),
+  excluded_users: z.array(zSnowflake).nullable().default(null),
+  excluded_message_regexes: z.array(zRegex(z.string())).nullable().default(null),
+  excluded_channels: z.array(zSnowflake).nullable().default(null),
+  excluded_categories: z.array(zSnowflake).nullable().default(null),
+  excluded_threads: z.array(zSnowflake).nullable().default(null),
+  exclude_bots: z.boolean().default(false),
+  excluded_roles: z.array(zSnowflake).nullable().default(null),
+  format: zLogFormats.partial().default({}),
+  timestamp_format: z.string().nullable().default(null),
+  include_embed_timestamp: z.boolean().nullable().default(null),
 });
-export type TLogChannel = t.TypeOf<typeof LogChannel>;
+export type TLogChannel = z.infer<typeof zLogChannel>;
 
-const LogChannelMap = t.record(t.string, LogChannel);
-export type TLogChannelMap = t.TypeOf<typeof LogChannelMap>;
+const zLogChannelMap = z.record(zSnowflake, zLogChannel);
+export type TLogChannelMap = z.infer<typeof zLogChannelMap>;
 
-export const ConfigSchema = t.type({
-  channels: LogChannelMap,
-  format: t.intersection([
-    tLogFormats,
-    t.type({
-      timestamp: t.string, // Legacy/deprecated
-    }),
-  ]),
-  ping_user: t.boolean, // Legacy/deprecated, if below is false mentions wont actually ping
-  allow_user_mentions: t.boolean,
-  timestamp_format: t.string,
-  include_embed_timestamp: t.boolean,
+export const zLogsConfig = z.strictObject({
+  channels: zLogChannelMap.default({}),
+  format: zLogFormats.prefault({}),
+  // Legacy/deprecated, if below is false mentions wont actually ping. In case you really want the old behavior, set below to true
+  ping_user: z.boolean().default(true),
+  allow_user_mentions: z.boolean().default(false),
+  timestamp_format: z.string().nullable().default("[<t:]X[>]"),
+  include_embed_timestamp: z.boolean().default(true),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
-// Hacky way of allowing a """null""" default value for config.format.timestamp
-// The type cannot be made nullable properly because io-ts's intersection type still considers
-// that it has to match the record type of tLogFormats, which includes string.
+// Hacky way of allowing a """null""" default value for config.format.timestamp due to legacy io-ts reasons
 export const FORMAT_NO_TIMESTAMP = "__NO_TIMESTAMP__";
 
 export interface LogsPluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zLogsConfig;
   state: {
     guildLogs: GuildLogs;
     savedMessages: GuildSavedMessages;
@@ -234,6 +241,8 @@ export const LogTypeData = z.object({
     channel: z.instanceof(TemplateSafeChannel),
     messageDate: z.string(),
     message: z.instanceof(TemplateSafeSavedMessage),
+    replyInfo: z.string(),
+    reply: z.instanceof(TemplateSafeValueContainer).nullable(),
   }),
 
   [LogType.MESSAGE_DELETE_BULK]: z.object({
@@ -484,6 +493,8 @@ export const LogTypeData = z.object({
     user: z.instanceof(TemplateSafeUser),
     channel: z.instanceof(TemplateSafeChannel),
     messageDate: z.string(),
+    replyInfo: z.string(),
+    reply: z.instanceof(TemplateSafeValueContainer).nullable(),
   }),
 
   [LogType.SET_ANTIRAID_USER]: z.object({

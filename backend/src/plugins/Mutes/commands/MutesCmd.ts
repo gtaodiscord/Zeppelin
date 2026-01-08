@@ -7,11 +7,11 @@ import {
   Snowflake,
 } from "discord.js";
 import moment from "moment-timezone";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { humanizeDurationShort } from "../../../humanizeDurationShort";
-import { getBaseUrl } from "../../../pluginUtils";
-import { DBDateFormat, MINUTES, renderUserUsername, resolveMember } from "../../../utils";
-import { IMuteWithDetails, mutesCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { humanizeDurationShort } from "../../../humanizeDuration.js";
+import { getBaseUrl } from "../../../pluginUtils.js";
+import { DBDateFormat, MINUTES, renderUsername, resolveMember } from "../../../utils.js";
+import { IMuteWithDetails, mutesCmd } from "../types.js";
 
 export const MutesCmd = mutesCmd({
   trigger: "mutes",
@@ -74,7 +74,7 @@ export const MutesCmd = mutesCmd({
       totalMutes = manuallyMutedMembers.length;
 
       lines = manuallyMutedMembers.map((member) => {
-        return `<@!${member.id}> (**${renderUserUsername(member.user)}**, \`${member.id}\`)   🔧 Manual mute`;
+        return `<@!${member.id}> (**${renderUsername(member)}**, \`${member.id}\`)   🔧 Manual mute`;
       });
     } else {
       // Show filtered active mutes (but not manual mutes)
@@ -123,7 +123,7 @@ export const MutesCmd = mutesCmd({
 
       lines = filteredMutes.map((mute) => {
         const user = pluginData.client.users.resolve(mute.user_id as Snowflake);
-        const username = user ? renderUserUsername(user) : "Unknown#0000";
+        const username = user ? renderUsername(user) : "Unknown#0000";
         const theCase = muteCasesById.get(mute.case_id);
         const caseName = theCase ? `Case #${theCase.case_number}` : "No case";
 

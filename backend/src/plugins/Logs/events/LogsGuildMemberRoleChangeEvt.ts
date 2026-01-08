@@ -1,9 +1,9 @@
 import { APIRole, AuditLogChange, AuditLogEvent } from "discord.js";
-import { guildPluginEventListener } from "knub";
-import { resolveRole } from "../../../utils";
-import { logMemberRoleAdd } from "../logFunctions/logMemberRoleAdd";
-import { logMemberRoleRemove } from "../logFunctions/logMemberRoleRemove";
-import { LogsPluginType } from "../types";
+import { guildPluginEventListener } from "vety";
+import { resolveRole } from "../../../utils.js";
+import { logMemberRoleAdd } from "../logFunctions/logMemberRoleAdd.js";
+import { logMemberRoleRemove } from "../logFunctions/logMemberRoleRemove.js";
+import { LogsPluginType } from "../types.js";
 
 type RoleAddChange = AuditLogChange & {
   key: "$add";
@@ -35,7 +35,7 @@ export const LogsGuildMemberRoleChangeEvt = guildPluginEventListener<LogsPluginT
     }
 
     const member = await pluginData.guild.members.fetch(auditLogEntry.targetId!);
-    const mod = await pluginData.client.users.fetch(auditLogEntry.executorId!);
+    const mod = auditLogEntry.executorId ? await pluginData.client.users.fetch(auditLogEntry.executorId) : null;
     for (const change of auditLogEntry.changes) {
       if (isRoleAddChange(change)) {
         const addedRoles = change.new.map((r) => resolveRole(pluginData.guild, r.id));

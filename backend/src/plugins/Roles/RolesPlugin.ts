@@ -1,23 +1,20 @@
-import { PluginOptions } from "knub";
-import { GuildLogs } from "../../data/GuildLogs";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { trimPluginDescription } from "../../utils";
-import { LogsPlugin } from "../Logs/LogsPlugin";
-import { RoleManagerPlugin } from "../RoleManager/RoleManagerPlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { AddRoleCmd } from "./commands/AddRoleCmd";
-import { MassAddRoleCmd } from "./commands/MassAddRoleCmd";
-import { MassRemoveRoleCmd } from "./commands/MassRemoveRoleCmd";
-import { RemoveRoleCmd } from "./commands/RemoveRoleCmd";
-import { ConfigSchema, RolesPluginType } from "./types";
+import { guildPlugin } from "vety";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { LogsPlugin } from "../Logs/LogsPlugin.js";
+import { RoleManagerPlugin } from "../RoleManager/RoleManagerPlugin.js";
+import { AddRoleCmd } from "./commands/AddRoleCmd.js";
+import { MassAddRoleCmd } from "./commands/MassAddRoleCmd.js";
+import { MassRemoveRoleCmd } from "./commands/MassRemoveRoleCmd.js";
+import { RemoveRoleCmd } from "./commands/RemoveRoleCmd.js";
+import { RolesPluginType, zRolesConfig } from "./types.js";
 
-const defaultOptions: PluginOptions<RolesPluginType> = {
-  config: {
-    can_assign: false,
-    can_mass_assign: false,
-    assignable_roles: ["558037973581430785"],
-  },
-  overrides: [
+export const RolesPlugin = guildPlugin<RolesPluginType>()({
+  name: "roles",
+
+  dependencies: () => [LogsPlugin, RoleManagerPlugin],
+  configSchema: zRolesConfig,
+  defaultOverrides: [
     {
       level: ">=50",
       config: {
@@ -31,22 +28,6 @@ const defaultOptions: PluginOptions<RolesPluginType> = {
       },
     },
   ],
-};
-
-export const RolesPlugin = zeppelinGuildPlugin<RolesPluginType>()({
-  name: "roles",
-  showInDocs: true,
-  info: {
-    prettyName: "Roles",
-    description: trimPluginDescription(`
-      Enables authorised users to add and remove whitelisted roles with a command.
-    `),
-    configSchema: ConfigSchema,
-  },
-
-  dependencies: () => [LogsPlugin, RoleManagerPlugin],
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
 
   // prettier-ignore
   messageCommands: [
@@ -60,5 +41,9 @@ export const RolesPlugin = zeppelinGuildPlugin<RolesPluginType>()({
     const { state, guild } = pluginData;
 
     state.logs = new GuildLogs(guild.id);
+  },
+
+  beforeStart(pluginData) {
+    pluginData.state.common = pluginData.getPlugin(CommonPlugin);
   },
 });

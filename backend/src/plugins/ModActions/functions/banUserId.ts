@@ -1,11 +1,11 @@
 import { DiscordAPIError, Snowflake } from "discord.js";
-import humanizeDuration from "humanize-duration";
-import { GuildPluginData } from "knub";
-import { CaseTypes } from "../../../data/CaseTypes";
-import { LogType } from "../../../data/LogType";
-import { registerExpiringTempban } from "../../../data/loops/expiringTempbansLoop";
-import { logger } from "../../../logger";
-import { TemplateSafeValueContainer, renderTemplate } from "../../../templateFormatter";
+import { GuildPluginData } from "vety";
+import { CaseTypes } from "../../../data/CaseTypes.js";
+import { LogType } from "../../../data/LogType.js";
+import { registerExpiringTempban } from "../../../data/loops/expiringTempbansLoop.js";
+import { humanizeDuration } from "../../../humanizeDuration.js";
+import { logger } from "../../../logger.js";
+import { TemplateParseError, TemplateSafeValueContainer, renderTemplate } from "../../../templateFormatter.js";
 import {
   DAYS,
   SECONDS,
@@ -15,13 +15,13 @@ import {
   resolveMember,
   resolveUser,
   ucfirst,
-} from "../../../utils";
-import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects";
-import { CasesPlugin } from "../../Cases/CasesPlugin";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { BanOptions, BanResult, IgnoredEventType, ModActionsPluginType } from "../types";
-import { getDefaultContactMethods } from "./getDefaultContactMethods";
-import { ignoreEvent } from "./ignoreEvent";
+} from "../../../utils.js";
+import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects.js";
+import { CasesPlugin } from "../../Cases/CasesPlugin.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { BanOptions, BanResult, IgnoredEventType, ModActionsPluginType } from "../types.js";
+import { getDefaultContactMethods } from "./getDefaultContactMethods.js";
+import { ignoreEvent } from "./ignoreEvent.js";
 
 /**
  * Ban the specified user id, whether or not they're actually on the server at the time. Generates a case.
@@ -30,11 +30,12 @@ export async function banUserId(
   pluginData: GuildPluginData<ModActionsPluginType>,
   userId: string,
   reason?: string,
+  reasonWithAttachments?: string,
   banOptions: BanOptions = {},
   banTime?: number,
 ): Promise<BanResult> {
   const config = pluginData.config.get();
-  const user = await resolveUser(pluginData.client, userId);
+  const user = await resolveUser(pluginData.client, userId, "ModActions:banUserId");
   if (!user.id) {
     return {
       status: "failed",
@@ -45,37 +46,59 @@ export async function banUserId(
   // Attempt to message the user *before* banning them, as doing it after may not be possible
   const member = await resolveMember(pluginData.client, pluginData.guild, userId);
   let notifyResult: UserNotificationResult = { method: null, success: true };
-  if (reason && member) {
+  if (reasonWithAttachments && member) {
     const contactMethods = banOptions?.contactMethods
       ? banOptions.contactMethods
       : getDefaultContactMethods(pluginData, "ban");
 
     if (contactMethods.length) {
       if (!banTime && config.ban_message) {
-        const banMessage = await renderTemplate(
-          config.ban_message,
-          new TemplateSafeValueContainer({
-            guildName: pluginData.guild.name,
-            reason,
-            moderator: banOptions.caseArgs?.modId
-              ? userToTemplateSafeUser(await resolveUser(pluginData.client, banOptions.caseArgs.modId))
-              : null,
-          }),
-        );
+        let banMessage: string;
+        try {
+          banMessage = await renderTemplate(
+            config.ban_message,
+            new TemplateSafeValueContainer({
+              guildName: pluginData.guild.name,
+              reason: reasonWithAttachments,
+              moderator: banOptions.caseArgs?.modId
+                ? userToTemplateSafeUser(await resolveUser(pluginData.client, banOptions.caseArgs.modId, "ModActions:banUserId"))
+                : null,
+            }),
+          );
+        } catch (err) {
+          if (err instanceof TemplateParseError) {
+            return {
+              status: "failed",
+              error: `Invalid ban_message format: ${err.message}`,
+            };
+          }
+          throw err;
+        }
 
         notifyResult = await notifyUser(member.user, banMessage, contactMethods);
       } else if (banTime && config.tempban_message) {
-        const banMessage = await renderTemplate(
-          config.tempban_message,
-          new TemplateSafeValueContainer({
-            guildName: pluginData.guild.name,
-            reason,
-            moderator: banOptions.caseArgs?.modId
-              ? userToTemplateSafeUser(await resolveUser(pluginData.client, banOptions.caseArgs.modId))
-              : null,
-            banTime: humanizeDuration(banTime),
-          }),
-        );
+        let banMessage: string;
+        try {
+          banMessage = await renderTemplate(
+            config.tempban_message,
+            new TemplateSafeValueContainer({
+              guildName: pluginData.guild.name,
+              reason: reasonWithAttachments,
+              moderator: banOptions.caseArgs?.modId
+                ? userToTemplateSafeUser(await resolveUser(pluginData.client, banOptions.caseArgs.modId, "ModActions:banUserId"))
+                : null,
+              banTime: humanizeDuration(banTime),
+            }),
+          );
+        } catch (err) {
+          if (err instanceof TemplateParseError) {
+            return {
+              status: "failed",
+              error: `Invalid tempban_message format: ${err.message}`,
+            };
+          }
+          throw err;
+        }
 
         notifyResult = await notifyUser(member.user, banMessage, contactMethods);
       } else {
@@ -142,7 +165,7 @@ export async function banUserId(
   });
 
   // Log the action
-  const mod = await resolveUser(pluginData.client, modId);
+  const mod = await resolveUser(pluginData.client, modId, "ModActions:banUserId");
 
   if (banTime) {
     pluginData.getPlugin(LogsPlugin).logMemberTimedBan({

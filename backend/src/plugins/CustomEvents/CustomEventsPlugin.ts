@@ -1,33 +1,30 @@
 import { GuildChannel, GuildMember, User } from "discord.js";
-import { guildPluginMessageCommand, parseSignature } from "knub";
+import { guildPlugin, guildPluginMessageCommand, parseSignature } from "vety";
 import { TSignature } from "knub-command-manager";
-import { commandTypes } from "../../commandTypes";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { TemplateSafeValueContainer, createTypedTemplateSafeValueContainer } from "../../templateFormatter";
-import { UnknownUser } from "../../utils";
-import { isScalar } from "../../utils/isScalar";
+import { commandTypes } from "../../commandTypes.js";
+import { TemplateSafeValueContainer, createTypedTemplateSafeValueContainer } from "../../templateFormatter.js";
+import { UnknownUser } from "../../utils.js";
+import { isScalar } from "../../utils/isScalar.js";
 import {
   channelToTemplateSafeChannel,
   memberToTemplateSafeMember,
   messageToTemplateSafeMessage,
   userToTemplateSafeUser,
-} from "../../utils/templateSafeObjects";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { runEvent } from "./functions/runEvent";
-import { ConfigSchema, CustomEventsPluginType } from "./types";
+} from "../../utils/templateSafeObjects.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { LogsPlugin } from "../Logs/LogsPlugin.js";
+import { runEvent } from "./functions/runEvent.js";
+import { CustomEventsPluginType, zCustomEventsConfig } from "./types.js";
 
-const defaultOptions = {
-  config: {
-    events: {},
-  },
-};
-
-export const CustomEventsPlugin = zeppelinGuildPlugin<CustomEventsPluginType>()({
+export const CustomEventsPlugin = guildPlugin<CustomEventsPluginType>()({
   name: "custom_events",
-  showInDocs: false,
 
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
+  dependencies: () => [LogsPlugin],
+  configSchema: zCustomEventsConfig,
+
+  beforeStart(pluginData) {
+    pluginData.state.common = pluginData.getPlugin(CommonPlugin);
+  },
 
   afterLoad(pluginData) {
     const config = pluginData.config.get();

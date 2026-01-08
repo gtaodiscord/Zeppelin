@@ -1,8 +1,8 @@
 import { AuditLogChange, AuditLogEvent } from "discord.js";
 import moment from "moment-timezone";
-import { MuteTypes } from "../../../data/MuteTypes";
-import { resolveUser } from "../../../utils";
-import { mutesEvt } from "../types";
+import { MuteTypes } from "../../../data/MuteTypes.js";
+import { resolveUser } from "../../../utils.js";
+import { mutesEvt } from "../types.js";
 
 export const RegisterManualTimeoutsEvt = mutesEvt({
   event: "guildAuditLogEntryCreate",
@@ -15,7 +15,7 @@ export const RegisterManualTimeoutsEvt = mutesEvt({
       return;
     }
 
-    const target = await resolveUser(pluginData.client, auditLogEntry.targetId!);
+    const target = await resolveUser(pluginData.client, auditLogEntry.targetId!, "Mutes:RegisterManualTimeoutsEvt");
 
     // Only act based on the last changes in this log
     let lastTimeoutChange: AuditLogChange | null = null;

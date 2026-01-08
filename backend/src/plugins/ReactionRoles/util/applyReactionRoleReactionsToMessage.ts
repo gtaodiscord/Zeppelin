@@ -1,9 +1,9 @@
 import { Snowflake } from "discord.js";
-import { GuildPluginData } from "knub";
-import { ReactionRole } from "../../../data/entities/ReactionRole";
-import { isDiscordAPIError, sleep } from "../../../utils";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { ReactionRolesPluginType } from "../types";
+import { GuildPluginData } from "vety";
+import { ReactionRole } from "../../../data/entities/ReactionRole.js";
+import { isDiscordAPIError, isDiscordJsTypeError, sleep } from "../../../utils.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { ReactionRolesPluginType } from "../types.js";
 
 const CLEAR_ROLES_EMOJI = "❌";
 
@@ -72,7 +72,12 @@ export async function applyReactionRoleReactionsToMessage(
       await targetMessage.react(rawEmoji);
       await sleep(750); // Make sure we don't hit rate limits
     } catch (e) {
-      if (isDiscordAPIError(e)) {
+      if (isDiscordJsTypeError(e)) {
+        errors.push(e.message);
+        logs.logBotAlert({
+          body: `Error ${e.code} while applying reaction role reactions to ${channelId}/${messageId}: ${e.message}.`,
+        });
+      } else if (isDiscordAPIError(e)) {
         if (e.code === 10014) {
           pluginData.state.reactionRoles.removeFromMessage(messageId, rawEmoji);
           errors.push(`Unknown emoji: ${rawEmoji}`);
@@ -82,6 +87,12 @@ export async function applyReactionRoleReactionsToMessage(
           continue;
         } else if (e.code === 50013) {
           errors.push(`Missing permissions to apply reactions`);
+          logs.logBotAlert({
+            body: `Error ${e.code} while applying reaction role reactions to ${channelId}/${messageId}: ${e.message}`,
+          });
+          break;
+        } else if (e.code === 30010) {
+          errors.push(`Maximum number of reactions reached (20)`);
           logs.logBotAlert({
             body: `Error ${e.code} while applying reaction role reactions to ${channelId}/${messageId}: ${e.message}`,
           });

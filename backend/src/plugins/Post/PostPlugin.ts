@@ -1,27 +1,27 @@
-import { PluginOptions } from "knub";
-import { onGuildEvent } from "../../data/GuildEvents";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { GuildScheduledPosts } from "../../data/GuildScheduledPosts";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { LogsPlugin } from "../Logs/LogsPlugin";
-import { TimeAndDatePlugin } from "../TimeAndDate/TimeAndDatePlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { EditCmd } from "./commands/EditCmd";
-import { EditEmbedCmd } from "./commands/EditEmbedCmd";
-import { PostCmd } from "./commands/PostCmd";
-import { PostEmbedCmd } from "./commands/PostEmbedCmd";
-import { ScheduledPostsDeleteCmd } from "./commands/ScheduledPostsDeleteCmd";
-import { ScheduledPostsListCmd } from "./commands/ScheduledPostsListCmd";
-import { ScheduledPostsShowCmd } from "./commands/ScheduledPostsShowCmd";
-import { ConfigSchema, PostPluginType } from "./types";
-import { postScheduledPost } from "./util/postScheduledPost";
+import { guildPlugin } from "vety";
+import { onGuildEvent } from "../../data/GuildEvents.js";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { GuildScheduledPosts } from "../../data/GuildScheduledPosts.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { LogsPlugin } from "../Logs/LogsPlugin.js";
+import { TimeAndDatePlugin } from "../TimeAndDate/TimeAndDatePlugin.js";
+import { EditCmd } from "./commands/EditCmd.js";
+import { EditEmbedCmd } from "./commands/EditEmbedCmd.js";
+import { PostCmd } from "./commands/PostCmd.js";
+import { PostEmbedCmd } from "./commands/PostEmbedCmd.js";
+import { ScheduledPostsDeleteCmd } from "./commands/ScheduledPostsDeleteCmd.js";
+import { ScheduledPostsListCmd } from "./commands/ScheduledPostsListCmd.js";
+import { ScheduledPostsShowCmd } from "./commands/ScheduledPostsShowCmd.js";
+import { PostPluginType, zPostConfig } from "./types.js";
+import { postScheduledPost } from "./util/postScheduledPost.js";
 
-const defaultOptions: PluginOptions<PostPluginType> = {
-  config: {
-    can_post: false,
-  },
-  overrides: [
+export const PostPlugin = guildPlugin<PostPluginType>()({
+  name: "post",
+
+  dependencies: () => [TimeAndDatePlugin, LogsPlugin],
+  configSchema: zPostConfig,
+  defaultOverrides: [
     {
       level: ">=100",
       config: {
@@ -29,19 +29,6 @@ const defaultOptions: PluginOptions<PostPluginType> = {
       },
     },
   ],
-};
-
-export const PostPlugin = zeppelinGuildPlugin<PostPluginType>()({
-  name: "post",
-  showInDocs: true,
-  info: {
-    prettyName: "Post",
-    configSchema: ConfigSchema,
-  },
-
-  dependencies: () => [TimeAndDatePlugin, LogsPlugin],
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
 
   // prettier-ignore
   messageCommands: [
@@ -60,6 +47,10 @@ export const PostPlugin = zeppelinGuildPlugin<PostPluginType>()({
     state.savedMessages = GuildSavedMessages.getGuildInstance(guild.id);
     state.scheduledPosts = GuildScheduledPosts.getGuildInstance(guild.id);
     state.logs = new GuildLogs(guild.id);
+  },
+
+  beforeStart(pluginData) {
+    pluginData.state.common = pluginData.getPlugin(CommonPlugin);
   },
 
   afterLoad(pluginData) {

@@ -1,21 +1,30 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginMessageCommand } from "knub";
-import { GuildMemberTimezones } from "../../data/GuildMemberTimezones";
-import { tNullable, tPartialDictionary } from "../../utils";
-import { tValidTimezone } from "../../utils/tValidTimezone";
-import { defaultDateFormats } from "./defaultDateFormats";
+import { BasePluginType, guildPluginMessageCommand, pluginUtils } from "vety";
+import { z } from "zod";
+import { GuildMemberTimezones } from "../../data/GuildMemberTimezones.js";
+import { keys } from "../../utils.js";
+import { zValidTimezone } from "../../utils/zValidTimezone.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { defaultDateFormats } from "./defaultDateFormats.js";
 
-export const ConfigSchema = t.type({
-  timezone: tValidTimezone,
-  date_formats: tNullable(tPartialDictionary(t.keyof(defaultDateFormats), t.string)),
-  can_set_timezone: t.boolean,
+const dateFormatTypeMap = keys(defaultDateFormats).reduce(
+  (map, key) => {
+    map[key] = z.string().default(defaultDateFormats[key]);
+    return map;
+  },
+  {} as Record<keyof typeof defaultDateFormats, z.ZodDefault<z.ZodString>>,
+);
+
+export const zTimeAndDateConfig = z.strictObject({
+  timezone: zValidTimezone(z.string()).default("Etc/UTC"),
+  date_formats: z.strictObject(dateFormatTypeMap).default(defaultDateFormats),
+  can_set_timezone: z.boolean().default(false),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface TimeAndDatePluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zTimeAndDateConfig;
   state: {
     memberTimezones: GuildMemberTimezones;
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
   };
 }
 

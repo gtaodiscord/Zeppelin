@@ -1,15 +1,21 @@
 import { GuildMember } from "discord.js";
-import { GuildPluginData } from "knub";
-import { CaseTypes } from "../../../data/CaseTypes";
-import { LogType } from "../../../data/LogType";
-import { renderTemplate, TemplateSafeValueContainer } from "../../../templateFormatter";
-import { createUserNotificationError, notifyUser, resolveUser, ucfirst, UserNotificationResult } from "../../../utils";
-import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects";
-import { CasesPlugin } from "../../Cases/CasesPlugin";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { IgnoredEventType, KickOptions, KickResult, ModActionsPluginType } from "../types";
-import { getDefaultContactMethods } from "./getDefaultContactMethods";
-import { ignoreEvent } from "./ignoreEvent";
+import { GuildPluginData } from "vety";
+import { CaseTypes } from "../../../data/CaseTypes.js";
+import { LogType } from "../../../data/LogType.js";
+import { renderTemplate, TemplateParseError, TemplateSafeValueContainer } from "../../../templateFormatter.js";
+import {
+  createUserNotificationError,
+  notifyUser,
+  resolveUser,
+  ucfirst,
+  UserNotificationResult,
+} from "../../../utils.js";
+import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects.js";
+import { CasesPlugin } from "../../Cases/CasesPlugin.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { IgnoredEventType, KickOptions, KickResult, ModActionsPluginType } from "../types.js";
+import { getDefaultContactMethods } from "./getDefaultContactMethods.js";
+import { ignoreEvent } from "./ignoreEvent.js";
 
 /**
  * Kick the specified server member. Generates a case.
@@ -18,29 +24,41 @@ export async function kickMember(
   pluginData: GuildPluginData<ModActionsPluginType>,
   member: GuildMember,
   reason?: string,
+  reasonWithAttachments?: string,
   kickOptions: KickOptions = {},
 ): Promise<KickResult> {
   const config = pluginData.config.get();
 
   // Attempt to message the user *before* kicking them, as doing it after may not be possible
   let notifyResult: UserNotificationResult = { method: null, success: true };
-  if (reason && member) {
+  if (reasonWithAttachments && member) {
     const contactMethods = kickOptions?.contactMethods
       ? kickOptions.contactMethods
       : getDefaultContactMethods(pluginData, "kick");
 
     if (contactMethods.length) {
       if (config.kick_message) {
-        const kickMessage = await renderTemplate(
-          config.kick_message,
-          new TemplateSafeValueContainer({
-            guildName: pluginData.guild.name,
-            reason,
-            moderator: kickOptions.caseArgs?.modId
-              ? userToTemplateSafeUser(await resolveUser(pluginData.client, kickOptions.caseArgs.modId))
-              : null,
-          }),
-        );
+        let kickMessage: string;
+        try {
+          kickMessage = await renderTemplate(
+            config.kick_message,
+            new TemplateSafeValueContainer({
+              guildName: pluginData.guild.name,
+              reason: reasonWithAttachments,
+              moderator: kickOptions.caseArgs?.modId
+                ? userToTemplateSafeUser(await resolveUser(pluginData.client, kickOptions.caseArgs.modId, "ModActions:kickMember"))
+                : null,
+            }),
+          );
+        } catch (err) {
+          if (err instanceof TemplateParseError) {
+            return {
+              status: "failed",
+              error: `Invalid kick_message format: ${err.message}`,
+            };
+          }
+          throw err;
+        }
 
         notifyResult = await notifyUser(member.user, kickMessage, contactMethods);
       } else {
@@ -75,7 +93,7 @@ export async function kickMember(
   });
 
   // Log the action
-  const mod = await resolveUser(pluginData.client, modId);
+  const mod = await resolveUser(pluginData.client, modId, "ModActions:kickMember");
   pluginData.getPlugin(LogsPlugin).logMemberKick({
     mod,
     user: member.user,

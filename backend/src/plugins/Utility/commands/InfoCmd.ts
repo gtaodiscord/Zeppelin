@@ -1,21 +1,21 @@
 import { Snowflake } from "discord.js";
-import { getChannelId, getRoleId } from "knub/helpers";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { sendErrorMessage } from "../../../pluginUtils";
-import { isValidSnowflake, noop, parseInviteCodeInput, resolveInvite, resolveUser } from "../../../utils";
-import { canReadChannel } from "../../../utils/canReadChannel";
-import { resolveMessageTarget } from "../../../utils/resolveMessageTarget";
-import { getChannelInfoEmbed } from "../functions/getChannelInfoEmbed";
-import { getCustomEmojiId } from "../functions/getCustomEmojiId";
-import { getEmojiInfoEmbed } from "../functions/getEmojiInfoEmbed";
-import { getGuildPreview } from "../functions/getGuildPreview";
-import { getInviteInfoEmbed } from "../functions/getInviteInfoEmbed";
-import { getMessageInfoEmbed } from "../functions/getMessageInfoEmbed";
-import { getRoleInfoEmbed } from "../functions/getRoleInfoEmbed";
-import { getServerInfoEmbed } from "../functions/getServerInfoEmbed";
-import { getSnowflakeInfoEmbed } from "../functions/getSnowflakeInfoEmbed";
-import { getUserInfoEmbed } from "../functions/getUserInfoEmbed";
-import { utilityCmd } from "../types";
+import { getChannelId, getRoleId } from "vety/helpers";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { resolveMessageMember } from "../../../pluginUtils.js";
+import { isValidSnowflake, noop, parseInviteCodeInput, resolveInvite, resolveUser } from "../../../utils.js";
+import { canReadChannel } from "../../../utils/canReadChannel.js";
+import { resolveMessageTarget } from "../../../utils/resolveMessageTarget.js";
+import { getChannelInfoEmbed } from "../functions/getChannelInfoEmbed.js";
+import { getCustomEmojiId } from "../functions/getCustomEmojiId.js";
+import { getEmojiInfoEmbed } from "../functions/getEmojiInfoEmbed.js";
+import { getGuildPreview } from "../functions/getGuildPreview.js";
+import { getInviteInfoEmbed } from "../functions/getInviteInfoEmbed.js";
+import { getMessageInfoEmbed } from "../functions/getMessageInfoEmbed.js";
+import { getRoleInfoEmbed } from "../functions/getRoleInfoEmbed.js";
+import { getServerInfoEmbed } from "../functions/getServerInfoEmbed.js";
+import { getSnowflakeInfoEmbed } from "../functions/getSnowflakeInfoEmbed.js";
+import { getUserInfoEmbed } from "../functions/getUserInfoEmbed.js";
+import { utilityCmd } from "../types.js";
 
 export const InfoCmd = utilityCmd({
   trigger: "info",
@@ -42,7 +42,7 @@ export const InfoCmd = utilityCmd({
       const channelId = getChannelId(value);
       const channel = channelId && pluginData.guild.channels.cache.get(channelId as Snowflake);
       if (channel) {
-        const embed = await getChannelInfoEmbed(pluginData, channelId!, message.author.id);
+        const embed = await getChannelInfoEmbed(pluginData, channelId!);
         if (embed) {
           message.channel.send({ embeds: [embed] });
           return;
@@ -54,7 +54,7 @@ export const InfoCmd = utilityCmd({
     if (userCfg.can_server) {
       const guild = await pluginData.client.guilds.fetch(value as Snowflake).catch(noop);
       if (guild) {
-        const embed = await getServerInfoEmbed(pluginData, value, message.author.id);
+        const embed = await getServerInfoEmbed(pluginData, value);
         if (embed) {
           message.channel.send({ embeds: [embed] });
           return;
@@ -64,9 +64,9 @@ export const InfoCmd = utilityCmd({
 
     // 3. User
     if (userCfg.can_userinfo) {
-      const user = await resolveUser(pluginData.client, value);
+      const user = await resolveUser(pluginData.client, value, "Utility:InfoCmd");
       if (user && userCfg.can_userinfo) {
-        const embed = await getUserInfoEmbed(pluginData, user.id, Boolean(args.compact), message.author.id);
+        const embed = await getUserInfoEmbed(pluginData, user.id, Boolean(args.compact));
         if (embed) {
           message.channel.send({ embeds: [embed] });
           return;
@@ -78,13 +78,9 @@ export const InfoCmd = utilityCmd({
     if (userCfg.can_messageinfo) {
       const messageTarget = await resolveMessageTarget(pluginData, value);
       if (messageTarget) {
-        if (canReadChannel(messageTarget.channel, message.member)) {
-          const embed = await getMessageInfoEmbed(
-            pluginData,
-            messageTarget.channel.id,
-            messageTarget.messageId,
-            message.author.id,
-          );
+        const authorMember = await resolveMessageMember(message);
+        if (canReadChannel(messageTarget.channel, authorMember)) {
+          const embed = await getMessageInfoEmbed(pluginData, messageTarget.channel.id, messageTarget.messageId);
           if (embed) {
             message.channel.send({ embeds: [embed] });
             return;
@@ -112,7 +108,7 @@ export const InfoCmd = utilityCmd({
     if (userCfg.can_server) {
       const serverPreview = await getGuildPreview(pluginData.client, value).catch(() => null);
       if (serverPreview) {
-        const embed = await getServerInfoEmbed(pluginData, value, message.author.id);
+        const embed = await getServerInfoEmbed(pluginData, value);
         if (embed) {
           message.channel.send({ embeds: [embed] });
           return;
@@ -125,7 +121,7 @@ export const InfoCmd = utilityCmd({
       const roleId = getRoleId(value);
       const role = roleId && pluginData.guild.roles.cache.get(roleId as Snowflake);
       if (role) {
-        const embed = await getRoleInfoEmbed(pluginData, role, message.author.id);
+        const embed = await getRoleInfoEmbed(pluginData, role);
         message.channel.send({ embeds: [embed] });
         return;
       }
@@ -145,15 +141,14 @@ export const InfoCmd = utilityCmd({
 
     // 9. Arbitrary ID
     if (isValidSnowflake(value) && userCfg.can_snowflake) {
-      const embed = await getSnowflakeInfoEmbed(pluginData, value, true, message.author.id);
+      const embed = await getSnowflakeInfoEmbed(value, true);
       message.channel.send({ embeds: [embed] });
       return;
     }
 
     // 10. No can do
-    sendErrorMessage(
-      pluginData,
-      message.channel,
+    void pluginData.state.common.sendErrorMessage(
+      message,
       "Could not find anything with that value or you are lacking permission for the snowflake type",
     );
   },

@@ -1,22 +1,23 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand } from "knub";
-import { GuildAutoReactions } from "../../data/GuildAutoReactions";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { AutoReaction } from "../../data/entities/AutoReaction";
+import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand, pluginUtils } from "vety";
+import { z } from "zod";
+import { GuildAutoReactions } from "../../data/GuildAutoReactions.js";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { AutoReaction } from "../../data/entities/AutoReaction.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
 
-export const ConfigSchema = t.type({
-  can_manage: t.boolean,
+export const zAutoReactionsConfig = z.strictObject({
+  can_manage: z.boolean().default(false),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface AutoReactionsPluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zAutoReactionsConfig;
   state: {
     logs: GuildLogs;
     savedMessages: GuildSavedMessages;
     autoReactions: GuildAutoReactions;
     cache: Map<string, AutoReaction | null>;
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
   };
 }
 

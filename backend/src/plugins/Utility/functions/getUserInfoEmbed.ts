@@ -1,6 +1,6 @@
 import { APIEmbed } from "discord.js";
-import { GuildPluginData } from "knub";
-import { CaseTypes } from "../../../data/CaseTypes";
+import { GuildPluginData } from "vety";
+import { CaseTypes } from "../../../data/CaseTypes.js";
 import {
   EmbedWith,
   messageLink,
@@ -9,11 +9,11 @@ import {
   resolveMember,
   resolveUser,
   sorter,
+  trimEmptyLines,
   trimLines,
   UnknownUser,
-} from "../../../utils";
-import { TimeAndDatePlugin } from "../../TimeAndDate/TimeAndDatePlugin";
-import { UtilityPluginType } from "../types";
+} from "../../../utils.js";
+import { UtilityPluginType } from "../types.js";
 
 const MAX_ROLES_TO_DISPLAY = 15;
 
@@ -26,9 +26,8 @@ export async function getUserInfoEmbed(
   pluginData: GuildPluginData<UtilityPluginType>,
   userId: string,
   compact = false,
-  requestMemberId?: string,
 ): Promise<APIEmbed | null> {
-  const user = await resolveUser(pluginData.client, userId);
+  const user = await resolveUser(pluginData.client, userId, "Utility:getUserInfoEmbed");
   if (!user || user instanceof UnknownUser) {
     return null;
   }
@@ -39,13 +38,11 @@ export async function getUserInfoEmbed(
     fields: [],
   };
 
-  const timeAndDate = pluginData.getPlugin(TimeAndDatePlugin);
-
   embed.author = {
-    name: `${user.bot ? "Bot" : "User"}:  ${renderUsername(user.username, user.discriminator)}`,
+    name: `${user.bot ? "Bot" : "User"}:  ${renderUsername(user)}`,
   };
 
-  const avatarURL = user.displayAvatarURL();
+  const avatarURL = (member ?? user).displayAvatarURL();
   embed.author.icon_url = avatarURL;
 
   if (compact) {
@@ -71,9 +68,8 @@ export async function getUserInfoEmbed(
   }
 
   const userInfoLines = [`ID: \`${user.id}\``, `Username: **${user.username}**`];
-  if (user.discriminator !== "0") {
-    userInfoLines.push(`Discriminator: **${user.discriminator}**`);
-  }
+  if (user.discriminator !== "0") userInfoLines.push(`Discriminator: **${user.discriminator}**`);
+  if (user.globalName) userInfoLines.push(`Display Name: **${user.globalName}**`);
   userInfoLines.push(`Created: **<t:${Math.round(user.createdTimestamp / 1000)}:R>**`);
   userInfoLines.push(`Mention: <@!${user.id}>`);
 
@@ -98,10 +94,12 @@ export async function getUserInfoEmbed(
     if (voiceChannel || member.voice.mute || member.voice.deaf) {
       embed.fields.push({
         name: preEmbedPadding + "Voice information",
-        value: trimLines(`
+        value: trimEmptyLines(`
           ${voiceChannel ? `Current voice channel: **${voiceChannel.name ?? "None"}**` : ""}
-          ${member.voice.mute ? "Server voice muted: **Yes**" : ""}
-          ${member.voice.deaf ? "Server voice deafened: **Yes**" : ""}
+          ${member.voice.serverMute ? "Server-muted: **Yes**" : ""}
+          ${member.voice.serverDeaf ? "Server-deafened: **Yes**" : ""}
+          ${member.voice.selfMute ? "Self-muted: **Yes**" : ""}
+          ${member.voice.selfDeaf ? "Self-deafened: **Yes**" : ""}
         `),
       });
     }

@@ -1,18 +1,18 @@
-import * as t from "io-ts";
-import { convertDelayStringToMS, tDelayString } from "../../../utils";
-import { RecentActionType } from "../constants";
-import { findRecentSpam } from "../functions/findRecentSpam";
-import { getMatchingRecentActions } from "../functions/getMatchingRecentActions";
-import { sumRecentActionCounts } from "../functions/sumRecentActionCounts";
-import { automodTrigger } from "../helpers";
+import { z } from "zod";
+import { convertDelayStringToMS, zDelayString } from "../../../utils.js";
+import { RecentActionType } from "../constants.js";
+import { findRecentSpam } from "../functions/findRecentSpam.js";
+import { getMatchingRecentActions } from "../functions/getMatchingRecentActions.js";
+import { sumRecentActionCounts } from "../functions/sumRecentActionCounts.js";
+import { automodTrigger } from "../helpers.js";
+
+const configSchema = z.strictObject({
+  amount: z.number().int(),
+  within: zDelayString,
+});
 
 export const MemberJoinSpamTrigger = automodTrigger<unknown>()({
-  configType: t.type({
-    amount: t.number,
-    within: tDelayString,
-  }),
-
-  defaultConfig: {},
+  configSchema,
 
   async match({ pluginData, context, triggerConfig }) {
     if (!context.joined || !context.member) {

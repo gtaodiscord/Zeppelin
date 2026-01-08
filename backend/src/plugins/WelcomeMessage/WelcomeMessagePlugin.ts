@@ -1,30 +1,14 @@
-import { PluginOptions } from "knub";
-import { GuildLogs } from "../../data/GuildLogs";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { LogsPlugin } from "../Logs/LogsPlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { SendWelcomeMessageEvt } from "./events/SendWelcomeMessageEvt";
-import { ConfigSchema, WelcomeMessagePluginType } from "./types";
+import { guildPlugin } from "vety";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { LogsPlugin } from "../Logs/LogsPlugin.js";
+import { SendWelcomeMessageEvt } from "./events/SendWelcomeMessageEvt.js";
+import { WelcomeMessagePluginType, zWelcomeMessageConfig } from "./types.js";
 
-const defaultOptions: PluginOptions<WelcomeMessagePluginType> = {
-  config: {
-    send_dm: false,
-    send_to_channel: null,
-    message: null,
-  },
-};
-
-export const WelcomeMessagePlugin = zeppelinGuildPlugin<WelcomeMessagePluginType>()({
+export const WelcomeMessagePlugin = guildPlugin<WelcomeMessagePluginType>()({
   name: "welcome_message",
-  showInDocs: true,
-  info: {
-    prettyName: "Welcome message",
-    configSchema: ConfigSchema,
-  },
 
   dependencies: () => [LogsPlugin],
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
+  configSchema: zWelcomeMessageConfig,
 
   // prettier-ignore
   events: [

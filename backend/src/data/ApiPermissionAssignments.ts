@@ -1,9 +1,10 @@
-import { ApiPermissions } from "@shared/apiPermissions";
-import { getRepository, Repository } from "typeorm";
-import { ApiAuditLog } from "./ApiAuditLog";
-import { AuditLogEventTypes } from "./apiAuditLogTypes";
-import { BaseRepository } from "./BaseRepository";
-import { ApiPermissionAssignment } from "./entities/ApiPermissionAssignment";
+import { ApiPermissions } from "@zeppelinbot/shared/apiPermissions.js";
+import { Repository } from "typeorm";
+import { ApiAuditLog } from "./ApiAuditLog.js";
+import { BaseRepository } from "./BaseRepository.js";
+import { AuditLogEventTypes } from "./apiAuditLogTypes.js";
+import { dataSource } from "./dataSource.js";
+import { ApiPermissionAssignment } from "./entities/ApiPermissionAssignment.js";
 
 export enum ApiPermissionTypes {
   User = "USER",
@@ -16,7 +17,7 @@ export class ApiPermissionAssignments extends BaseRepository {
 
   constructor() {
     super();
-    this.apiPermissions = getRepository(ApiPermissionAssignment);
+    this.apiPermissions = dataSource.getRepository(ApiPermissionAssignment);
     this.auditLogs = new ApiAuditLog();
   }
 

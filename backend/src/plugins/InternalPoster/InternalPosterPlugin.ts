@@ -1,28 +1,21 @@
-import { PluginOptions } from "knub";
-import { Queue } from "../../Queue";
-import { Webhooks } from "../../data/Webhooks";
-import { makeIoTsConfigParser, mapToPublicFn } from "../../pluginUtils";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { editMessage } from "./functions/editMessage";
-import { sendMessage } from "./functions/sendMessage";
-import { ConfigSchema, InternalPosterPluginType } from "./types";
+import { guildPlugin } from "vety";
+import { Queue } from "../../Queue.js";
+import { Webhooks } from "../../data/Webhooks.js";
+import { makePublicFn } from "../../pluginUtils.js";
+import { editMessage } from "./functions/editMessage.js";
+import { sendMessage } from "./functions/sendMessage.js";
+import { InternalPosterPluginType, zInternalPosterConfig } from "./types.js";
 
-const defaultOptions: PluginOptions<InternalPosterPluginType> = {
-  config: {},
-  overrides: [],
-};
-
-export const InternalPosterPlugin = zeppelinGuildPlugin<InternalPosterPluginType>()({
+export const InternalPosterPlugin = guildPlugin<InternalPosterPluginType>()({
   name: "internal_poster",
-  showInDocs: false,
 
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
+  configSchema: zInternalPosterConfig,
 
-  // prettier-ignore
-  public: {
-    sendMessage: mapToPublicFn(sendMessage),
-    editMessage: mapToPublicFn(editMessage),
+  public(pluginData) {
+    return {
+      sendMessage: makePublicFn(pluginData, sendMessage),
+      editMessage: makePublicFn(pluginData, editMessage),
+    };
   },
 
   async beforeLoad(pluginData) {

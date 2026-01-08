@@ -40,6 +40,7 @@ build/Release
 # Dependency directories
 node_modules/
 jspm_packages/
+.pnpm-store
 
 # Typescript v1 declaration files
 typings/
@@ -82,3 +83,12 @@ npm-audit.txt
 *.debug.js
 
 .vscode/
+
+config-errors.txt
+/config-schema.json
+
+*.tsbuildinfo
+
+# Legacy data folders
+/docker/development/data
+/docker/production/data

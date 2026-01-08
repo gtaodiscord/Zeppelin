@@ -1,16 +1,17 @@
-import { DeleteResult, getRepository, InsertResult, Repository } from "typeorm";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { ContextMenuLink } from "./entities/ContextMenuLink";
+import { DeleteResult, InsertResult, Repository } from "typeorm";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { dataSource } from "./dataSource.js";
+import { ContextMenuLink } from "./entities/ContextMenuLink.js";
 
 export class GuildContextMenuLinks extends BaseGuildRepository {
   private contextLinks: Repository<ContextMenuLink>;
 
   constructor(guildId) {
     super(guildId);
-    this.contextLinks = getRepository(ContextMenuLink);
+    this.contextLinks = dataSource.getRepository(ContextMenuLink);
   }
 
-  async get(id: string): Promise<ContextMenuLink | undefined> {
+  async get(id: string): Promise<ContextMenuLink | null> {
     return this.contextLinks.findOne({
       where: {
         guild_id: this.guildId,

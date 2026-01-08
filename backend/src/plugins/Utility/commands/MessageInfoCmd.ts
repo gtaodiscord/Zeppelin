@@ -1,8 +1,8 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { sendErrorMessage } from "../../../pluginUtils";
-import { canReadChannel } from "../../../utils/canReadChannel";
-import { getMessageInfoEmbed } from "../functions/getMessageInfoEmbed";
-import { utilityCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { resolveMessageMember } from "../../../pluginUtils.js";
+import { canReadChannel } from "../../../utils/canReadChannel.js";
+import { getMessageInfoEmbed } from "../functions/getMessageInfoEmbed.js";
+import { utilityCmd } from "../types.js";
 
 export const MessageInfoCmd = utilityCmd({
   trigger: ["message", "messageinfo"],
@@ -15,19 +15,15 @@ export const MessageInfoCmd = utilityCmd({
   },
 
   async run({ message, args, pluginData }) {
-    if (!canReadChannel(args.message.channel, message.member)) {
-      sendErrorMessage(pluginData, message.channel, "Unknown message");
+    const messageMember = await resolveMessageMember(message);
+    if (!canReadChannel(args.message.channel, messageMember)) {
+      void pluginData.state.common.sendErrorMessage(message, "Unknown message");
       return;
     }
 
-    const embed = await getMessageInfoEmbed(
-      pluginData,
-      args.message.channel.id,
-      args.message.messageId,
-      message.author.id,
-    );
+    const embed = await getMessageInfoEmbed(pluginData, args.message.channel.id, args.message.messageId);
     if (!embed) {
-      sendErrorMessage(pluginData, message.channel, "Unknown message");
+      void pluginData.state.common.sendErrorMessage(message, "Unknown message");
       return;
     }
 

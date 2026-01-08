@@ -1,25 +1,41 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginEventListener } from "knub";
-import { GuildContextMenuLinks } from "../../data/GuildContextMenuLinks";
+import { APIEmbed, Awaitable } from "discord.js";
+import { BasePluginType } from "vety";
+import { z } from "zod";
+import { GuildCases } from "../../data/GuildCases.js";
 
-export const ConfigSchema = t.type({
-  can_use: t.boolean,
-
-  user_muteindef: t.boolean,
-  user_mute1d: t.boolean,
-  user_mute1h: t.boolean,
-  user_info: t.boolean,
-  message_clean10: t.boolean,
-  message_clean25: t.boolean,
-  message_clean50: t.boolean,
+export const zContextMenusConfig = z.strictObject({
+  can_use: z.boolean().default(false),
+  can_open_mod_menu: z.boolean().default(false),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface ContextMenuPluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zContextMenusConfig;
   state: {
-    contextMenuLinks: GuildContextMenuLinks;
+    cases: GuildCases;
   };
 }
 
-export const contextMenuEvt = guildPluginEventListener<ContextMenuPluginType>();
+export const enum ModMenuActionType {
+  PAGE = "page",
+  NOTE = "note",
+  WARN = "warn",
+  CLEAN = "clean",
+  MUTE = "mute",
+  BAN = "ban",
+}
+
+export const enum ModMenuNavigationType {
+  FIRST = "first",
+  PREV = "prev",
+  NEXT = "next",
+  LAST = "last",
+  INFO = "info",
+  CASES = "cases",
+}
+
+export interface ModMenuActionOpts {
+  action: ModMenuActionType;
+  target: string;
+}
+
+export type LoadModMenuPageFn = (page: number) => Awaitable<APIEmbed>;

@@ -1,13 +1,14 @@
-import { getRepository, Repository } from "typeorm";
-import { BaseRepository } from "./BaseRepository";
-import { Supporter } from "./entities/Supporter";
+import { Repository } from "typeorm";
+import { BaseRepository } from "./BaseRepository.js";
+import { dataSource } from "./dataSource.js";
+import { Supporter } from "./entities/Supporter.js";
 
 export class Supporters extends BaseRepository {
   private supporters: Repository<Supporter>;
 
   constructor() {
     super();
-    this.supporters = getRepository(Supporter);
+    this.supporters = dataSource.getRepository(Supporter);
   }
 
   getAll() {

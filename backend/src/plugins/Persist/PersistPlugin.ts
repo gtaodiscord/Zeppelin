@@ -1,39 +1,17 @@
-import { PluginOptions } from "knub";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildPersistedData } from "../../data/GuildPersistedData";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { trimPluginDescription } from "../../utils";
-import { GuildMemberCachePlugin } from "../GuildMemberCache/GuildMemberCachePlugin";
-import { LogsPlugin } from "../Logs/LogsPlugin";
-import { RoleManagerPlugin } from "../RoleManager/RoleManagerPlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { LoadDataEvt } from "./events/LoadDataEvt";
-import { StoreDataEvt } from "./events/StoreDataEvt";
-import { ConfigSchema, PersistPluginType } from "./types";
+import { guildPlugin } from "vety";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildPersistedData } from "../../data/GuildPersistedData.js";
+import { LogsPlugin } from "../Logs/LogsPlugin.js";
+import { RoleManagerPlugin } from "../RoleManager/RoleManagerPlugin.js";
+import { LoadDataEvt } from "./events/LoadDataEvt.js";
+import { StoreDataEvt } from "./events/StoreDataEvt.js";
+import { PersistPluginType, zPersistConfig } from "./types.js";
 
-const defaultOptions: PluginOptions<PersistPluginType> = {
-  config: {
-    persisted_roles: [],
-    persist_nicknames: false,
-    persist_voice_mutes: false,
-  },
-};
-
-export const PersistPlugin = zeppelinGuildPlugin<PersistPluginType>()({
+export const PersistPlugin = guildPlugin<PersistPluginType>()({
   name: "persist",
-  showInDocs: true,
-  info: {
-    prettyName: "Persist",
-    description: trimPluginDescription(`
-      Re-apply roles or nicknames for users when they rejoin the server.
-      Mute roles are re-applied automatically, this plugin is not required for that.
-    `),
-    configSchema: ConfigSchema,
-  },
 
-  dependencies: () => [LogsPlugin, RoleManagerPlugin, GuildMemberCachePlugin],
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
+  dependencies: () => [LogsPlugin, RoleManagerPlugin],
+  configSchema: zPersistConfig,
 
   // prettier-ignore
   events: [

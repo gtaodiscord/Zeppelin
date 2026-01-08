@@ -1,8 +1,11 @@
 import {
+  ActionRowBuilder,
   APIEmbed,
+  ButtonBuilder,
   ChannelType,
   Client,
   DiscordAPIError,
+  DiscordjsTypeError,
   EmbedData,
   EmbedType,
   Emoji,
@@ -14,56 +17,49 @@ import {
   GuildTextBasedChannel,
   Invite,
   InviteGuild,
+  InviteType,
   LimitedCollection,
   Message,
+  MessageActionRowComponentBuilder,
   MessageCreateOptions,
   MessageMentionOptions,
-  PartialChannelData,
+  PartialGroupDMChannel,
   PartialMessage,
   RoleResolvable,
-  Snowflake,
+  SendableChannels,
   Sticker,
-  TextBasedChannel,
   User,
 } from "discord.js";
 import emojiRegex from "emoji-regex";
-import { either } from "fp-ts/lib/Either";
-import { unsafeCoerce } from "fp-ts/lib/function";
 import fs from "fs";
 import https from "https";
-import humanizeDuration from "humanize-duration";
-import * as t from "io-ts";
-import { isEqual } from "lodash";
-import moment from "moment-timezone";
+import { isEqual } from "lodash-es";
 import { performance } from "perf_hooks";
-import tlds from "tlds";
+import tlds from "tlds" with { type: "json" };
 import tmp from "tmp";
 import { URL } from "url";
-import { z, ZodError } from "zod";
-import { ISavedMessageAttachmentData, SavedMessage } from "./data/entities/SavedMessage";
-import { getProfiler } from "./profiler";
-import { SimpleCache } from "./SimpleCache";
-import { sendDM } from "./utils/sendDM";
-import { waitForButtonConfirm } from "./utils/waitForInteraction";
-import { decodeAndValidateStrict, StrictValidationError } from "./validatorUtils";
+import { z, ZodError, ZodPipe, ZodRecord, ZodString, ZodTransform } from "zod";
+import { ISavedMessageAttachmentData, SavedMessage } from "./data/entities/SavedMessage.js";
+import { delayStringMultipliers, humanizeDuration } from "./humanizeDuration.js";
+import { getProfiler } from "./profiler.js";
+import { SimpleCache } from "./SimpleCache.js";
+import { sendDM } from "./utils/sendDM.js";
+import { Brand } from "./utils/typeUtils.js";
+import { waitForButtonConfirm } from "./utils/waitForInteraction.js";
+import { GenericCommandSource } from "./pluginUtils.js";
+import { getOrFetchUser } from "./utils/getOrFetchUser.js";
+import { incrementDebugCounter } from "./debugCounters.js";
 
 const fsp = fs.promises;
-
-const delayStringMultipliers = {
-  w: 1000 * 60 * 60 * 24 * 7,
-  d: 1000 * 60 * 60 * 24,
-  h: 1000 * 60 * 60,
-  m: 1000 * 60,
-  s: 1000,
-  x: 1,
-};
 
 export const MS = 1;
 export const SECONDS = 1000 * MS;
 export const MINUTES = 60 * SECONDS;
 export const HOURS = 60 * MINUTES;
 export const DAYS = 24 * HOURS;
-export const WEEKS = 7 * 24 * HOURS;
+export const WEEKS = 7 * DAYS;
+export const YEARS = (365 + 1 / 4 - 1 / 100 + 1 / 400) * DAYS;
+export const MONTHS = YEARS / 12;
 
 export const EMPTY_CHAR = "\u200b";
 
@@ -91,71 +87,15 @@ export function isDiscordAPIError(err: Error | string): err is DiscordAPIError {
   return err instanceof DiscordAPIError;
 }
 
-export function tNullable<T extends t.Type<any, any>>(type: T) {
-  return t.union([type, t.undefined, t.null], `Nullable<${type.name}>`);
+export function isDiscordJsTypeError(err: unknown): err is DiscordjsTypeError {
+  return err instanceof DiscordjsTypeError;
 }
 
-export const tNormalizedNullOrUndefined = new t.Type<undefined, null | undefined>(
-  "tNormalizedNullOrUndefined",
-  (v): v is undefined => typeof v === "undefined",
-  (v, c) => (v == null ? t.success(undefined) : t.failure(v, c, "Value must be null or undefined")),
-  () => undefined,
-);
-
-/**
- * Similar to `tNullable`, but normalizes both `null` and `undefined` to `undefined`.
- * This allows adding optional config options that can be "removed" by setting the value to `null`.
- */
-export function tNormalizedNullOptional<T extends t.Type<any, any>>(type: T) {
-  return t.union(
-    [type, tNormalizedNullOrUndefined],
-    `Optional<${type.name}>`, // Simplified name for errors and config schema views
-  );
-}
-
-export type TDeepPartial<T> = T extends t.InterfaceType<any>
-  ? TDeepPartialProps<T["props"]>
-  : T extends t.DictionaryType<any, any>
-  ? t.DictionaryType<T["domain"], TDeepPartial<T["codomain"]>>
-  : T extends t.UnionType<any[]>
-  ? t.UnionType<Array<TDeepPartial<T["types"][number]>>>
-  : T extends t.IntersectionType<any>
-  ? t.IntersectionType<Array<TDeepPartial<T["types"][number]>>>
-  : T extends t.ArrayType<any>
-  ? t.ArrayType<TDeepPartial<T["type"]>>
-  : T;
-
-// Based on t.PartialC
-export interface TDeepPartialProps<P extends t.Props>
-  extends t.PartialType<
-    P,
-    {
-      [K in keyof P]?: TDeepPartial<t.TypeOf<P[K]>>;
-    },
-    {
-      [K in keyof P]?: TDeepPartial<t.OutputOf<P[K]>>;
-    }
-  > {}
-
-export function tDeepPartial<T>(type: T): TDeepPartial<T> {
-  if (type instanceof t.InterfaceType || type instanceof t.PartialType) {
-    const newProps = {};
-    for (const [key, prop] of Object.entries(type.props)) {
-      newProps[key] = tDeepPartial(prop);
-    }
-    return t.partial(newProps) as TDeepPartial<T>;
-  } else if (type instanceof t.DictionaryType) {
-    return t.record(type.domain, tDeepPartial(type.codomain)) as TDeepPartial<T>;
-  } else if (type instanceof t.UnionType) {
-    return t.union(type.types.map((unionType) => tDeepPartial(unionType))) as TDeepPartial<T>;
-  } else if (type instanceof t.IntersectionType) {
-    const types = type.types.map((intersectionType) => tDeepPartial(intersectionType));
-    return t.intersection(types as [t.Mixed, t.Mixed]) as unknown as TDeepPartial<T>;
-  } else if (type instanceof t.ArrayType) {
-    return t.array(tDeepPartial(type.type)) as TDeepPartial<T>;
-  } else {
-    return type as TDeepPartial<T>;
-  }
+// null | undefined -> undefined
+export function zNullishToUndefined<T extends z.ZodTypeAny>(
+  type: T,
+): ZodPipe<T, ZodTransform<NonNullable<z.output<T>> | undefined>> {
+  return type.transform((v) => v ?? undefined);
 }
 
 export function getScalarDifference<T extends object>(
@@ -207,177 +147,155 @@ export function differenceToString(diff: Map<string, { was: any; is: any }>): st
 // https://stackoverflow.com/a/49262929/316944
 export type Not<T, E> = T & Exclude<T, E>;
 
-// io-ts partial dictionary type
-// From https://github.com/gcanti/io-ts/issues/429#issuecomment-655394345
-export interface PartialDictionaryC<D extends t.Mixed, C extends t.Mixed>
-  extends t.DictionaryType<
-    D,
-    C,
-    {
-      [K in t.TypeOf<D>]?: t.TypeOf<C>;
-    },
-    {
-      [K in t.OutputOf<D>]?: t.OutputOf<C>;
-    },
-    unknown
-  > {}
-
-export const tPartialDictionary = <D extends t.Mixed, C extends t.Mixed>(
-  domain: D,
-  codomain: C,
-  name?: string,
-): PartialDictionaryC<D, C> => {
-  return unsafeCoerce(t.record(t.union([domain, t.undefined]), codomain, name));
-};
-
 export function nonNullish<V>(v: V): v is NonNullable<V> {
   return v != null;
 }
 
 export type GuildInvite = Invite & { guild: InviteGuild | Guild };
 export type GroupDMInvite = Invite & {
-  channel: PartialChannelData;
-  type: typeof ChannelType.GroupDM;
+  channel: PartialGroupDMChannel;
 };
 
-/**
- * Mirrors EmbedOptions from Eris
- */
-export const tEmbed = t.type({
-  title: tNullable(t.string),
-  description: tNullable(t.string),
-  url: tNullable(t.string),
-  timestamp: tNullable(t.string),
-  color: tNullable(t.number),
-  footer: tNullable(
-    t.type({
-      text: t.string,
-      icon_url: tNullable(t.string),
-      proxy_icon_url: tNullable(t.string),
-    }),
-  ),
-  image: tNullable(
-    t.type({
-      url: tNullable(t.string),
-      proxy_url: tNullable(t.string),
-      width: tNullable(t.number),
-      height: tNullable(t.number),
-    }),
-  ),
-  thumbnail: tNullable(
-    t.type({
-      url: tNullable(t.string),
-      proxy_url: tNullable(t.string),
-      width: tNullable(t.number),
-      height: tNullable(t.number),
-    }),
-  ),
-  video: tNullable(
-    t.type({
-      url: tNullable(t.string),
-      width: tNullable(t.number),
-      height: tNullable(t.number),
-    }),
-  ),
-  provider: tNullable(
-    t.type({
-      name: t.string,
-      url: tNullable(t.string),
-    }),
-  ),
-  fields: tNullable(
-    t.array(
-      t.type({
-        name: tNullable(t.string),
-        value: tNullable(t.string),
-        inline: tNullable(t.boolean),
-      }),
-    ),
-  ),
-  author: tNullable(
-    t.type({
-      name: t.string,
-      url: tNullable(t.string),
-      width: tNullable(t.number),
-      height: tNullable(t.number),
-    }),
-  ),
+export function zBoundedCharacters(min: number, max: number) {
+  return z.string().refine(
+    (str) => {
+      const len = [...str].length; // Unicode aware character split
+      return len >= min && len <= max;
+    },
+    {
+      message: `String must be between ${min} and ${max} characters long`,
+    },
+  );
+}
+
+export const zSnowflake = z.string().refine((str) => isSnowflake(str), {
+  message: "Invalid snowflake ID",
 });
 
-export const zEmbedInput = z.object({
-  title: z.string().optional(),
-  description: z.string().optional(),
-  url: z.string().optional(),
-  timestamp: z.string().optional(),
-  color: z.number().optional(),
+const regexWithFlags = /^\/(.*?)\/([i]*)$/;
 
-  footer: z.optional(
-    z.object({
-      text: z.string(),
-      icon_url: z.string().optional(),
-    }),
-  ),
+export class InvalidRegexError extends Error {}
 
-  image: z.optional(
-    z.object({
-      url: z.string().optional(),
-      width: z.number().optional(),
-      height: z.number().optional(),
-    }),
-  ),
+/**
+ * This function supports two input syntaxes for regexes: /<pattern>/<flags> and just <pattern>
+ */
+export function inputPatternToRegExp(pattern: string) {
+  const advancedSyntaxMatch = pattern.match(regexWithFlags);
+  const [finalPattern, flags] = advancedSyntaxMatch ? [advancedSyntaxMatch[1], advancedSyntaxMatch[2]] : [pattern, ""];
+  try {
+    return new RegExp(finalPattern, flags);
+  } catch (e) {
+    throw new InvalidRegexError(e.message);
+  }
+}
 
-  thumbnail: z.optional(
-    z.object({
-      url: z.string().optional(),
-      width: z.number().optional(),
-      height: z.number().optional(),
-    }),
-  ),
+export function zRegex<T extends ZodString>(zStr: T) {
+  return zStr.refine((str) => {
+    try {
+      inputPatternToRegExp(str);
+      return true;
+    } catch (err) {
+      if (err instanceof InvalidRegexError) {
+        return false;
+      }
+      throw err;
+    }
+  });
+}
 
-  video: z.optional(
-    z.object({
-      url: z.string().optional(),
-      width: z.number().optional(),
-      height: z.number().optional(),
-    }),
-  ),
+export const zEmbedInput = z
+  .strictObject({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    url: z.string().optional(),
+    timestamp: z.string().optional(),
+    color: z.number().optional(),
 
-  provider: z.optional(
-    z.object({
-      name: z.string(),
-      url: z.string().optional(),
-    }),
-  ),
-
-  fields: z.optional(
-    z.array(
+    footer: z.optional(
       z.object({
-        name: z.string().optional(),
-        value: z.string().optional(),
-        inline: z.boolean().optional(),
+        text: z.string(),
+        icon_url: z.string().optional(),
       }),
     ),
-  ),
 
-  author: z
-    .optional(
+    image: z.optional(
       z.object({
-        name: z.string(),
         url: z.string().optional(),
         width: z.number().optional(),
         height: z.number().optional(),
       }),
-    )
-    .nullable(),
-});
+    ),
+
+    thumbnail: z.optional(
+      z.object({
+        url: z.string().optional(),
+        width: z.number().optional(),
+        height: z.number().optional(),
+      }),
+    ),
+
+    video: z.optional(
+      z.object({
+        url: z.string().optional(),
+        width: z.number().optional(),
+        height: z.number().optional(),
+      }),
+    ),
+
+    provider: z.optional(
+      z.object({
+        name: z.string(),
+        url: z.string().optional(),
+      }),
+    ),
+
+    fields: z.optional(
+      z.array(
+        z.object({
+          name: z.string().optional(),
+          value: z.string().optional(),
+          inline: z.boolean().optional(),
+        }),
+      ),
+    ),
+
+    author: z
+      .optional(
+        z.object({
+          name: z.string(),
+          url: z.string().optional(),
+          width: z.number().optional(),
+          height: z.number().optional(),
+        }),
+      )
+      .nullable(),
+  })
+  .meta({
+    id: "embedInput",
+  });
 
 export type EmbedWith<T extends keyof APIEmbed> = APIEmbed & Pick<Required<APIEmbed>, T>;
 
-export const zStrictMessageContent = z.object({
-  content: z.string().optional(),
-  tts: z.boolean().optional(),
-  embeds: z.array(zEmbedInput).optional(),
-});
+export const zStrictMessageContent = z
+  .strictObject({
+    content: z.string().optional(),
+    tts: z.boolean().optional(),
+    embeds: z.union([z.array(zEmbedInput), zEmbedInput]).optional(),
+    embed: zEmbedInput.optional(),
+  })
+  .transform((data) => {
+    if (data.embed) {
+      data.embeds = [data.embed];
+      delete data.embed;
+    }
+    if (data.embeds && !Array.isArray(data.embeds)) {
+      data.embeds = [data.embeds];
+    }
+    return data as StrictMessageContent;
+  })
+  .meta({
+    id: "strictMessageContent",
+  });
 
 export type ZStrictMessageContent = z.infer<typeof zStrictMessageContent>;
 
@@ -387,15 +305,8 @@ export type StrictMessageContent = {
   embeds?: APIEmbed[];
 };
 
-export const tStrictMessageContent = t.type({
-  content: tNullable(t.string),
-  tts: tNullable(t.boolean),
-  disableEveryone: tNullable(t.boolean),
-  embed: tNullable(tEmbed),
-  embeds: tNullable(t.array(tEmbed)),
-});
-
-export const tMessageContent = t.union([t.string, tStrictMessageContent]);
+export type MessageContent = string | StrictMessageContent;
+export const zMessageContent = z.union([zBoundedCharacters(0, 4000), zStrictMessageContent]);
 
 export function validateAndParseMessageContent(input: unknown): StrictMessageContent {
   if (input == null) {
@@ -454,11 +365,21 @@ function dropNullValuesRecursively(obj: any) {
 /**
  * Mirrors AllowedMentions from Eris
  */
-export const tAllowedMentions = t.type({
-  everyone: tNormalizedNullOptional(t.boolean),
-  users: tNormalizedNullOptional(t.union([t.boolean, t.array(t.string)])),
-  roles: tNormalizedNullOptional(t.union([t.boolean, t.array(t.string)])),
-  repliedUser: tNormalizedNullOptional(t.boolean),
+export const zAllowedMentions = z.strictObject({
+  everyone: zNullishToUndefined(z.boolean().nullable().optional()),
+  users: zNullishToUndefined(
+    z
+      .union([z.boolean(), z.array(z.string())])
+      .nullable()
+      .optional(),
+  ),
+  roles: zNullishToUndefined(
+    z
+      .union([z.boolean(), z.array(z.string())])
+      .nullable()
+      .optional(),
+  ),
+  replied_user: zNullishToUndefined(z.boolean().nullable().optional()),
 });
 
 export function dropPropertiesByName(obj, propName) {
@@ -472,39 +393,28 @@ export function dropPropertiesByName(obj, propName) {
   }
 }
 
-export const tAlphanumeric = new t.Type<string, string>(
-  "tAlphanumeric",
-  (s): s is string => typeof s === "string",
-  (from, to) =>
-    either.chain(t.string.validate(from, to), (s) => {
-      return s.match(/\W/) ? t.failure(from, to, "String must be alphanumeric") : t.success(s);
-    }),
-  (s) => s,
-);
+export function zBoundedRecord<TRecord extends ZodRecord<any, any>>(
+  record: TRecord,
+  minKeys: number,
+  maxKeys: number,
+): TRecord {
+  return record.refine(
+    (data) => {
+      const len = Object.keys(data).length;
+      return len >= minKeys && len <= maxKeys;
+    },
+    {
+      message: `Object must have ${minKeys}-${maxKeys} keys`,
+    },
+  );
+}
 
-export const tDateTime = new t.Type<string, string>(
-  "tDateTime",
-  (s): s is string => typeof s === "string",
-  (from, to) =>
-    either.chain(t.string.validate(from, to), (s) => {
-      const parsed =
-        s.length === 10 ? moment.utc(s, "YYYY-MM-DD") : s.length === 19 ? moment.utc(s, "YYYY-MM-DD HH:mm:ss") : null;
-
-      return parsed && parsed.isValid() ? t.success(s) : t.failure(from, to, "Invalid datetime");
-    }),
-  (s) => s,
-);
-
-export const tDelayString = new t.Type<string, string>(
-  "tDelayString",
-  (s): s is string => typeof s === "string",
-  (from, to) =>
-    either.chain(t.string.validate(from, to), (s) => {
-      const ms = convertDelayStringToMS(s);
-      return ms === null ? t.failure(from, to, "Invalid delay string") : t.success(s);
-    }),
-  (s) => s,
-);
+export const zDelayString = z
+  .string()
+  .max(32)
+  .refine((str) => convertDelayStringToMS(str) !== null, {
+    message: "Invalid delay string",
+  });
 
 // To avoid running into issues with the JS max date vaLue, we cap maximum delay strings *far* below that.
 // See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#The_ECMAScript_epoch_and_timestamps
@@ -514,7 +424,7 @@ const MAX_DELAY_STRING_AMOUNT = 100 * 365 * DAYS;
  * Turns a "delay string" such as "1h30m" to milliseconds
  */
 export function convertDelayStringToMS(str, defaultUnit = "m"): number | null {
-  const regex = /^([0-9]+)\s*([wdhms])?[a-z]*\s*/;
+  const regex = /^([0-9]+)\s*((?:mo?)|[ywdhs])?[a-z]*\s*/;
   let match;
   let ms = 0;
 
@@ -609,9 +519,11 @@ export function stripObjectToScalars(obj, includedNested: string[] = []) {
 
 export const snowflakeRegex = /[1-9][0-9]{5,19}/;
 
+export type Snowflake = Brand<string, "Snowflake">;
+
 const isSnowflakeRegex = new RegExp(`^${snowflakeRegex.source}$`);
-export function isSnowflake(v: string): boolean {
-  return isSnowflakeRegex.test(v);
+export function isSnowflake(v: unknown): v is Snowflake {
+  return typeof v === "string" && isSnowflakeRegex.test(v);
 }
 
 export function sleep(ms: number): Promise<void> {
@@ -647,7 +559,13 @@ export function getUrlsInString(str: string, onlyUnique = false): MatchedURL[] {
       return urls;
     }
 
-    const hostnameParts = matchUrl.hostname.split(".");
+    let hostname = matchUrl.hostname.toLowerCase();
+
+    if (hostname.length > 3) {
+      hostname = hostname.replace(/[^a-z]+$/, "");
+    }
+
+    const hostnameParts = hostname.split(".");
     const tld = hostnameParts[hostnameParts.length - 1];
     if (tlds.includes(tld)) {
       urls.push(matchUrl);
@@ -658,11 +576,12 @@ export function getUrlsInString(str: string, onlyUnique = false): MatchedURL[] {
 }
 
 export function parseInviteCodeInput(str: string): string {
-  if (str.match(/^[a-z0-9]{6,}$/i)) {
-    return str;
+  const parsedInviteCodes = getInviteCodesInString(str);
+  if (parsedInviteCodes.length) {
+    return parsedInviteCodes[0];
   }
 
-  return getInviteCodesInString(str)[0];
+  return str;
 }
 
 export function isNotNull<T>(value: T): value is Exclude<T, null | undefined> {
@@ -936,7 +855,7 @@ export function chunkMessageLines(str: string, maxChunkLength = 1990): string[] 
 }
 
 export async function createChunkedMessage(
-  channel: TextBasedChannel | User,
+  channel: SendableChannels | User,
   messageText: string,
   allowedMentions?: MessageMentionOptions,
 ) {
@@ -1221,12 +1140,12 @@ export function resolveUserId(bot: Client, value: string) {
     return mentionMatch[1];
   }
 
-  // A non-mention, full username?
-  const usernameMatch = value.match(/^@?([^#]+)#(\d{4})$/);
+  // a username
+  const usernameMatch = value.match(/^@?(\S{3,})$/);
   if (usernameMatch) {
     const profiler = getProfiler();
     const start = performance.now();
-    const user = bot.users.cache.find((u) => u.username === usernameMatch[1] && u.discriminator === usernameMatch[2]);
+    const user = bot.users.cache.find((u) => u.tag === usernameMatch[1]);
     profiler?.addDataPoint("utils:resolveUserId:usernameMatch", performance.now() - start);
     if (user) {
       return user.id;
@@ -1249,9 +1168,7 @@ export function getUser(client: Client, userResolvable: string): User | UnknownU
  * Resolves a User from the passed string. The passed string can be a user id, a user mention, a full username (with discrim), etc.
  * If the user is not found in the cache, it's fetched from the API.
  */
-export async function resolveUser(bot: Client, value: string): Promise<User | UnknownUser>;
-export async function resolveUser<T>(bot: Client, value: Not<T, string>): Promise<UnknownUser>;
-export async function resolveUser(bot, value) {
+export async function resolveUser(bot: Client, value: unknown, context?: string): Promise<User | UnknownUser> {
   if (typeof value !== "string") {
     return new UnknownUser();
   }
@@ -1261,26 +1178,8 @@ export async function resolveUser(bot, value) {
     return new UnknownUser();
   }
 
-  // If we have the user cached, return that directly
-  if (bot.users.cache.has(userId)) {
-    return bot.users.fetch(userId);
-  }
-
-  // We don't want to spam the API by trying to fetch unknown users again and again,
-  // so we cache the fact that they're "unknown" for a while
-  if (unknownUsers.has(userId)) {
-    return new UnknownUser({ id: userId });
-  }
-
-  const freshUser = await bot.users.fetch(userId, true, true).catch(noop);
-  if (freshUser) {
-    return freshUser;
-  }
-
-  unknownUsers.add(userId);
-  setTimeout(() => unknownUsers.delete(userId), 15 * MINUTES);
-
-  return new UnknownUser({ id: userId });
+  incrementDebugCounter(`resolveUser:${context ?? "unknown"}`);
+  return (await getOrFetchUser(bot, userId)) ?? new UnknownUser();
 }
 
 /**
@@ -1403,11 +1302,25 @@ export async function resolveStickerId(bot: Client, id: Snowflake): Promise<Stic
 }
 
 export async function confirm(
-  channel: GuildTextBasedChannel,
+  context: GenericCommandSource,
   userId: string,
   content: MessageCreateOptions,
 ): Promise<boolean> {
-  return waitForButtonConfirm(channel, content, { restrictToId: userId });
+  return waitForButtonConfirm(context, content, { restrictToId: userId });
+}
+
+export function createDisabledButtonRow(
+  row: ActionRowBuilder<MessageActionRowComponentBuilder>
+): ActionRowBuilder<MessageActionRowComponentBuilder> {
+  const newRow = new ActionRowBuilder<MessageActionRowComponentBuilder>();
+  for (const component of row.components) {
+    if (component instanceof ButtonBuilder) {
+      newRow.addComponents(
+        ButtonBuilder.from(component).setDisabled(true)
+      );
+    }
+  }
+  return newRow;
 }
 
 export function messageSummary(msg: SavedMessage) {
@@ -1474,8 +1387,7 @@ export function messageLink(guildIdOrMessage: string | Message | null, channelId
 }
 
 export function isValidEmbed(embed: any): boolean {
-  const result = decodeAndValidateStrict(tEmbed, embed);
-  return !(result instanceof StrictValidationError);
+  return zEmbedInput.safeParse(embed).success;
 }
 
 const formatter = new Intl.NumberFormat("en-US");
@@ -1577,14 +1489,14 @@ export function isFullMessage(msg: Message | PartialMessage): msg is Message {
 }
 
 export function isGuildInvite(invite: Invite): invite is GuildInvite {
-  return invite.guild != null;
+  return invite.type === InviteType.Guild;
 }
 
 export function isGroupDMInvite(invite: Invite): invite is GroupDMInvite {
-  return invite.guild == null && invite.channel?.type === ChannelType.GroupDM;
+  return invite.type === InviteType.GroupDM;
 }
 
-export function inviteHasCounts(invite: Invite): invite is Invite {
+export function inviteHasCounts(invite: Invite): invite is Invite & { memberCount: number; presenceCount: number } {
   return invite.memberCount != null;
 }
 
@@ -1603,7 +1515,11 @@ export function isTruthy<T>(value: T): value is Exclude<T, false | null | undefi
 
 export const DBDateFormat = "YYYY-MM-DD HH:mm:ss";
 
-export function renderUsername(username: string, discriminator: string): string {
+export function renderUsername(memberOrUser: GuildMember | UnknownUser | User): string;
+export function renderUsername(username: string, discriminator: string): string;
+export function renderUsername(username: string | User | GuildMember | UnknownUser, discriminator?: string): string {
+  if (username instanceof GuildMember) return username.user.tag;
+  if (username instanceof User || username instanceof UnknownUser) return username.tag;
   if (discriminator === "0") {
     return username;
   }
@@ -1612,4 +1528,22 @@ export function renderUsername(username: string, discriminator: string): string 
 
 export function renderUserUsername(user: User | UnknownUser): string {
   return renderUsername(user.username, user.discriminator);
+}
+
+type Entries<T> = Array<
+  {
+    [Key in keyof T]-?: [Key, T[Key]];
+  }[keyof T]
+>;
+
+export function entries<T extends object>(object: T) {
+  return Object.entries(object) as Entries<T>;
+}
+
+export function keys<T extends object>(object: T) {
+  return Object.keys(object) as Array<keyof T>;
+}
+
+export function values<T extends object>(object: T) {
+  return Object.values(object) as Array<T[keyof T]>;
 }

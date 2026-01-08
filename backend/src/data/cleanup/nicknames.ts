@@ -1,8 +1,8 @@
 import moment from "moment-timezone";
-import { getRepository, In } from "typeorm";
-import { DAYS, DBDateFormat } from "../../utils";
-import { connection } from "../db";
-import { NicknameHistoryEntry } from "../entities/NicknameHistoryEntry";
+import { In } from "typeorm";
+import { DAYS, DBDateFormat } from "../../utils.js";
+import { dataSource } from "../dataSource.js";
+import { NicknameHistoryEntry } from "../entities/NicknameHistoryEntry.js";
 
 export const NICKNAME_RETENTION_PERIOD = 30 * DAYS;
 const CLEAN_PER_LOOP = 500;
@@ -10,13 +10,13 @@ const CLEAN_PER_LOOP = 500;
 export async function cleanupNicknames(): Promise<number> {
   let cleaned = 0;
 
-  const nicknameHistoryRepository = getRepository(NicknameHistoryEntry);
+  const nicknameHistoryRepository = dataSource.getRepository(NicknameHistoryEntry);
   const dateThreshold = moment.utc().subtract(NICKNAME_RETENTION_PERIOD, "ms").format(DBDateFormat);
 
   // Clean old nicknames (NICKNAME_RETENTION_PERIOD)
   let rows;
   do {
-    rows = await connection.query(
+    rows = await dataSource.query(
       `
       SELECT id
       FROM nickname_history

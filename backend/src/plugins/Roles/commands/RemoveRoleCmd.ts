@@ -1,10 +1,10 @@
 import { GuildChannel } from "discord.js";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { canActOn, sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils";
-import { resolveRoleId, verboseUserMention } from "../../../utils";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { RoleManagerPlugin } from "../../RoleManager/RoleManagerPlugin";
-import { rolesCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { canActOn, resolveMessageMember } from "../../../pluginUtils.js";
+import { resolveRoleId, verboseUserMention } from "../../../utils.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { RoleManagerPlugin } from "../../RoleManager/RoleManagerPlugin.js";
+import { rolesCmd } from "../types.js";
 
 export const RemoveRoleCmd = rolesCmd({
   trigger: "removerole",
@@ -17,20 +17,24 @@ export const RemoveRoleCmd = rolesCmd({
   },
 
   async run({ message: msg, args, pluginData }) {
-    if (!canActOn(pluginData, msg.member, args.member, true)) {
-      sendErrorMessage(pluginData, msg.channel, "Cannot remove roles from this user: insufficient permissions");
+    const authorMember = await resolveMessageMember(msg);
+    if (!canActOn(pluginData, authorMember, args.member, true)) {
+      void pluginData.state.common.sendErrorMessage(
+        msg,
+        "Cannot remove roles from this user: insufficient permissions",
+      );
       return;
     }
 
     const roleId = await resolveRoleId(pluginData.client, pluginData.guild.id, args.role);
     if (!roleId) {
-      sendErrorMessage(pluginData, msg.channel, "Invalid role id");
+      void pluginData.state.common.sendErrorMessage(msg, "Invalid role id");
       return;
     }
 
     const config = await pluginData.config.getForMessage(msg);
     if (!config.assignable_roles.includes(roleId)) {
-      sendErrorMessage(pluginData, msg.channel, "You cannot remove that role");
+      void pluginData.state.common.sendErrorMessage(msg, "You cannot remove that role");
       return;
     }
 
@@ -40,12 +44,12 @@ export const RemoveRoleCmd = rolesCmd({
       pluginData.getPlugin(LogsPlugin).logBotAlert({
         body: `Unknown role configured for 'roles' plugin: ${roleId}`,
       });
-      sendErrorMessage(pluginData, msg.channel, "You cannot remove that role");
+      void pluginData.state.common.sendErrorMessage(msg, "You cannot remove that role");
       return;
     }
 
     if (!args.member.roles.cache.has(roleId)) {
-      sendErrorMessage(pluginData, msg.channel, "Member doesn't have that role");
+      void pluginData.state.common.sendErrorMessage(msg, "Member doesn't have that role");
       return;
     }
 
@@ -56,9 +60,8 @@ export const RemoveRoleCmd = rolesCmd({
       roles: [role],
     });
 
-    sendSuccessMessage(
-      pluginData,
-      msg.channel,
+    void pluginData.state.common.sendSuccessMessage(
+      msg,
       `Removed role **${role.name}** from ${verboseUserMention(args.member.user)}!`,
     );
   },

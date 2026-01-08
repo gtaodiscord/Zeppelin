@@ -1,15 +1,12 @@
-import * as t from "io-ts";
-import { Configs } from "../../data/Configs";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { zeppelinGlobalPlugin } from "../ZeppelinPluginBlueprint";
-import { reloadChangedGuilds } from "./functions/reloadChangedGuilds";
-import { GuildConfigReloaderPluginType } from "./types";
+import { globalPlugin } from "vety";
+import { Configs } from "../../data/Configs.js";
+import { reloadChangedGuilds } from "./functions/reloadChangedGuilds.js";
+import { GuildConfigReloaderPluginType, zGuildConfigReloaderPluginConfig } from "./types.js";
 
-export const GuildConfigReloaderPlugin = zeppelinGlobalPlugin<GuildConfigReloaderPluginType>()({
+export const GuildConfigReloaderPlugin = globalPlugin<GuildConfigReloaderPluginType>()({
   name: "guild_config_reloader",
-  showInDocs: false,
 
-  configParser: makeIoTsConfigParser(t.type({})),
+  configSchema: zGuildConfigReloaderPluginConfig,
 
   async beforeLoad(pluginData) {
     const { state } = pluginData;

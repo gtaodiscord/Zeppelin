@@ -1,15 +1,16 @@
 import moment from "moment-timezone";
-import { getRepository, Repository } from "typeorm";
-import { DBDateFormat } from "../utils";
-import { BaseRepository } from "./BaseRepository";
-import { Tempban } from "./entities/Tempban";
+import { Repository } from "typeorm";
+import { DBDateFormat } from "../utils.js";
+import { BaseRepository } from "./BaseRepository.js";
+import { dataSource } from "./dataSource.js";
+import { Tempban } from "./entities/Tempban.js";
 
 export class Tempbans extends BaseRepository {
   private tempbans: Repository<Tempban>;
 
   constructor() {
     super();
-    this.tempbans = getRepository(Tempban);
+    this.tempbans = dataSource.getRepository(Tempban);
   }
 
   getSoonExpiringTempbans(threshold: number): Promise<Tempban[]> {

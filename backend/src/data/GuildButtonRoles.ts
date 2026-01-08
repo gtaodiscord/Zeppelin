@@ -1,6 +1,6 @@
 import { getRepository, Repository } from "typeorm";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { ButtonRole } from "./entities/ButtonRole";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { ButtonRole } from "./entities/ButtonRole.js";
 
 export class GuildButtonRoles extends BaseGuildRepository {
   private buttonRoles: Repository<ButtonRole>;
@@ -12,15 +12,19 @@ export class GuildButtonRoles extends BaseGuildRepository {
 
   async getForButtonId(buttonId: string) {
     return this.buttonRoles.findOne({
-      guild_id: this.guildId,
-      button_id: buttonId,
+      where: {
+        guild_id: this.guildId,
+        button_id: buttonId,
+      },
     });
   }
 
   async getAllForMessageId(messageId: string) {
     return this.buttonRoles.find({
-      guild_id: this.guildId,
-      message_id: messageId,
+      where: {
+        guild_id: this.guildId,
+        message_id: messageId,
+      },
     });
   }
 
@@ -40,8 +44,10 @@ export class GuildButtonRoles extends BaseGuildRepository {
 
   async getForButtonGroup(buttonGroup: string) {
     return this.buttonRoles.find({
-      guild_id: this.guildId,
-      button_group: buttonGroup,
+      where: {
+        guild_id: this.guildId,
+        button_group: buttonGroup,
+      },
     });
   }
 

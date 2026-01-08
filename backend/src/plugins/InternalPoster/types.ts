@@ -1,15 +1,13 @@
 import { WebhookClient } from "discord.js";
-import * as t from "io-ts";
-import { BasePluginType } from "knub";
-import { Queue } from "../../Queue";
-import { Webhooks } from "../../data/Webhooks";
+import { BasePluginType } from "vety";
+import { z } from "zod";
+import { Queue } from "../../Queue.js";
+import { Webhooks } from "../../data/Webhooks.js";
 
-export const ConfigSchema = t.type({});
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
+export const zInternalPosterConfig = z.strictObject({}).default({});
 
 export interface InternalPosterPluginType extends BasePluginType {
-  config: TConfigSchema;
-
+  configSchema: typeof zInternalPosterConfig;
   state: {
     queue: Queue;
     webhooks: Webhooks;

@@ -1,9 +1,9 @@
 import { AuditLogChange, AuditLogEvent } from "discord.js";
 import moment from "moment-timezone";
-import { CaseTypes } from "../../../data/CaseTypes";
-import { resolveUser } from "../../../utils";
-import { CasesPlugin } from "../../Cases/CasesPlugin";
-import { modActionsEvt } from "../types";
+import { CaseTypes } from "../../../data/CaseTypes.js";
+import { resolveUser } from "../../../utils.js";
+import { CasesPlugin } from "../../Cases/CasesPlugin.js";
+import { modActionsEvt } from "../types.js";
 
 export const AuditLogEvents = modActionsEvt({
   event: "guildAuditLogEntryCreate",
@@ -18,7 +18,7 @@ export const AuditLogEvents = modActionsEvt({
 
     // Create mute/unmute cases for manual timeouts
     if (auditLogEntry.action === AuditLogEvent.MemberUpdate && config.create_cases_for_manual_actions) {
-      const target = await resolveUser(pluginData.client, auditLogEntry.targetId!);
+      const target = await resolveUser(pluginData.client, auditLogEntry.targetId!, "ModActions:AuditLogEvents");
 
       // Only act based on the last changes in this log
       let muteChange: AuditLogChange | null = null;
@@ -42,7 +42,9 @@ export const AuditLogEvents = modActionsEvt({
             caseId: existingCaseId,
             modId: auditLogEntry.executor?.id || "0",
             body: auditLogEntry.reason || "",
-            noteDetails: [`Timeout set to expire on <t:${moment.utc(muteChange.new as string).valueOf()}>`],
+            noteDetails: [
+              `Timeout set to expire on <t:${Math.ceil(moment.utc(muteChange.new as string).valueOf() / 1_000)}>`,
+            ],
           });
         } else {
           await casesPlugin.createCase({

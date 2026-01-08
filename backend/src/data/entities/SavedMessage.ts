@@ -1,4 +1,4 @@
-import { Snowflake, StickerFormatType, StickerType } from "discord.js";
+import { EmbedType, Snowflake, StickerFormatType, StickerType } from "discord.js";
 import { Column, Entity, PrimaryColumn } from "typeorm";
 
 export interface ISavedMessageAttachmentData {
@@ -14,6 +14,7 @@ export interface ISavedMessageAttachmentData {
 
 export interface ISavedMessageEmbedData {
   title: string | null;
+  type?: EmbedType;
   description: string | null;
   url: string | null;
   timestamp: number | null;
@@ -74,6 +75,11 @@ export interface ISavedMessageData {
   embeds?: ISavedMessageEmbedData[];
   stickers?: ISavedMessageStickerData[];
   timestamp: number;
+  reference?: {
+    messageId?: Snowflake | null;
+    channelId?: Snowflake | null;
+    guildId?: Snowflake | null;
+  };
 }
 
 @Entity("messages")

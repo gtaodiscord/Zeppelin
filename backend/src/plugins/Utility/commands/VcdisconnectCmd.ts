@@ -1,9 +1,9 @@
 import { VoiceChannel } from "discord.js";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { canActOn, sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils";
-import { renderUserUsername } from "../../../utils";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { utilityCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { canActOn, resolveMessageMember } from "../../../pluginUtils.js";
+import { renderUsername } from "../../../utils.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { utilityCmd } from "../types.js";
 
 export const VcdisconnectCmd = utilityCmd({
   trigger: ["vcdisconnect", "vcdisc", "vcdc", "vckick", "vck"],
@@ -16,13 +16,14 @@ export const VcdisconnectCmd = utilityCmd({
   },
 
   async run({ message: msg, args, pluginData }) {
-    if (!canActOn(pluginData, msg.member, args.member)) {
-      sendErrorMessage(pluginData, msg.channel, "Cannot move: insufficient permissions");
+    const authorMember = await resolveMessageMember(msg);
+    if (!canActOn(pluginData, authorMember, args.member)) {
+      void pluginData.state.common.sendErrorMessage(msg, "Cannot move: insufficient permissions");
       return;
     }
 
     if (!args.member.voice?.channelId) {
-      sendErrorMessage(pluginData, msg.channel, "Member is not in a voice channel");
+      void pluginData.state.common.sendErrorMessage(msg, "Member is not in a voice channel");
       return;
     }
     const channel = pluginData.guild.channels.cache.get(args.member.voice.channelId) as VoiceChannel;
@@ -30,7 +31,7 @@ export const VcdisconnectCmd = utilityCmd({
     try {
       await args.member.voice.disconnect();
     } catch {
-      sendErrorMessage(pluginData, msg.channel, "Failed to disconnect member");
+      void pluginData.state.common.sendErrorMessage(msg, "Failed to disconnect member");
       return;
     }
 
@@ -40,10 +41,9 @@ export const VcdisconnectCmd = utilityCmd({
       oldChannel: channel,
     });
 
-    sendSuccessMessage(
-      pluginData,
-      msg.channel,
-      `**${renderUserUsername(args.member.user)}** disconnected from **${channel.name}**`,
+    pluginData.state.common.sendSuccessMessage(
+      msg,
+      `**${renderUsername(args.member)}** disconnected from **${channel.name}**`,
     );
   },
 });

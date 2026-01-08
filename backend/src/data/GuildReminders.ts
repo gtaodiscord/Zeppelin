@@ -1,13 +1,14 @@
-import { getRepository, Repository } from "typeorm";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { Reminder } from "./entities/Reminder";
+import { Repository } from "typeorm";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { dataSource } from "./dataSource.js";
+import { Reminder } from "./entities/Reminder.js";
 
 export class GuildReminders extends BaseGuildRepository {
   private reminders: Repository<Reminder>;
 
   constructor(guildId) {
     super(guildId);
-    this.reminders = getRepository(Reminder);
+    this.reminders = dataSource.getRepository(Reminder);
   }
 
   async getDueReminders(): Promise<Reminder[]> {
@@ -28,7 +29,9 @@ export class GuildReminders extends BaseGuildRepository {
   }
 
   find(id: number) {
-    return this.reminders.findOne({ id });
+    return this.reminders.findOne({
+      where: { id },
+    });
   }
 
   async delete(id) {

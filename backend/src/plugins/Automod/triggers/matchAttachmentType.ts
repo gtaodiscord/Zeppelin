@@ -1,27 +1,23 @@
 import { escapeInlineCode, Snowflake } from "discord.js";
-import * as t from "io-ts";
-import { asSingleLine, messageSummary, verboseChannelMention } from "../../../utils";
-import { automodTrigger } from "../helpers";
+import { extname } from "path";
+import { z } from "zod";
+import { asSingleLine, messageSummary, verboseChannelMention } from "../../../utils.js";
+import { automodTrigger } from "../helpers.js";
 
 interface MatchResultType {
   matchedType: string;
   mode: "blacklist" | "whitelist";
 }
 
-export const MatchAttachmentTypeTrigger = automodTrigger<MatchResultType>()({
-  configType: t.type({
-    filetype_blacklist: t.array(t.string),
-    blacklist_enabled: t.boolean,
-    filetype_whitelist: t.array(t.string),
-    whitelist_enabled: t.boolean,
-  }),
+const configSchema = z.strictObject({
+  whitelist_enabled: z.boolean().default(false),
+  filetype_whitelist: z.array(z.string().max(32)).max(255).default([]),
+  blacklist_enabled: z.boolean().default(false),
+  filetype_blacklist: z.array(z.string().max(32)).max(255).default([]),
+});
 
-  defaultConfig: {
-    filetype_blacklist: [],
-    blacklist_enabled: false,
-    filetype_whitelist: [],
-    whitelist_enabled: false,
-  },
+export const MatchAttachmentTypeTrigger = automodTrigger<MatchResultType>()({
+  configSchema,
 
   async match({ context, triggerConfig: trigger }) {
     if (!context.message) {
@@ -33,7 +29,7 @@ export const MatchAttachmentTypeTrigger = automodTrigger<MatchResultType>()({
     }
 
     for (const attachment of context.message.data.attachments) {
-      const attachmentType = attachment.url.split(".").pop()!.toLowerCase();
+      const attachmentType = extname(new URL(attachment.url).pathname).slice(1).toLowerCase();
 
       const blacklist = trigger.blacklist_enabled
         ? (trigger.filetype_blacklist || []).map((_t) => _t.toLowerCase())

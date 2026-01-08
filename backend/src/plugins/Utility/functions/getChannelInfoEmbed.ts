@@ -1,8 +1,8 @@
 import { APIEmbed, ChannelType, Snowflake, StageChannel, VoiceChannel } from "discord.js";
-import humanizeDuration from "humanize-duration";
-import { GuildPluginData } from "knub";
-import { EmbedWith, MINUTES, formatNumber, preEmbedPadding, trimLines, verboseUserMention } from "../../../utils";
-import { UtilityPluginType } from "../types";
+import { GuildPluginData } from "vety";
+import { humanizeDuration } from "../../../humanizeDuration.js";
+import { EmbedWith, MINUTES, formatNumber, preEmbedPadding, trimLines, verboseUserMention } from "../../../utils.js";
+import { UtilityPluginType } from "../types.js";
 
 const TEXT_CHANNEL_ICON =
   "https://cdn.discordapp.com/attachments/740650744830623756/740656843545772062/text-channel.png";
@@ -19,10 +19,11 @@ const PRIVATE_THREAD_ICON =
 const FORUM_CHANNEL_ICON =
   "https://cdn.discordapp.com/attachments/740650744830623756/1091681253364875294/forum-channel-icon.png";
 
+const MEDIA_CHANNEL_ICON = "https://cdn.discordapp.com/attachments/876134205229252658/1178335624940490792/media.png";
+
 export async function getChannelInfoEmbed(
   pluginData: GuildPluginData<UtilityPluginType>,
   channelId: string,
-  requestMemberId?: string,
 ): Promise<APIEmbed | null> {
   const channel = pluginData.guild.channels.cache.get(channelId as Snowflake);
   if (!channel) {
@@ -42,6 +43,7 @@ export async function getChannelInfoEmbed(
       [ChannelType.PrivateThread]: PRIVATE_THREAD_ICON,
       [ChannelType.AnnouncementThread]: PUBLIC_THREAD_ICON,
       [ChannelType.GuildForum]: FORUM_CHANNEL_ICON,
+      [ChannelType.GuildMedia]: MEDIA_CHANNEL_ICON,
     }[channel.type] ?? TEXT_CHANNEL_ICON;
 
   const channelType =
@@ -56,6 +58,7 @@ export async function getChannelInfoEmbed(
       [ChannelType.AnnouncementThread]: "News Thread channel",
       [ChannelType.GuildDirectory]: "Hub channel",
       [ChannelType.GuildForum]: "Forum channel",
+      [ChannelType.GuildMedia]: "Media channel",
     }[channel.type] ?? "Channel";
 
   embed.author = {

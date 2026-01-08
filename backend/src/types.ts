@@ -1,55 +1,40 @@
-import * as t from "io-ts";
-import { BaseConfig, Knub } from "knub";
+import { GlobalPluginBlueprint, GuildPluginBlueprint } from "vety";
+import { z } from "zod";
+import { zSnowflake } from "./utils.js";
 
-export interface ZeppelinGuildConfig extends BaseConfig {
-  success_emoji?: string;
-  error_emoji?: string;
-
-  // Deprecated
-  timezone?: string;
-  date_formats?: any;
-}
-
-export const ZeppelinGuildConfigSchema = t.type({
+export const zZeppelinGuildConfig = z.strictObject({
   // From BaseConfig
-  prefix: t.string,
-  levels: t.record(t.string, t.number),
-  plugins: t.record(t.string, t.unknown),
-
-  // From ZeppelinGuildConfig
-  success_emoji: t.string,
-  error_emoji: t.string,
-
-  // Deprecated
-  timezone: t.string,
-  date_formats: t.unknown,
+  prefix: z.string().optional(),
+  levels: z.record(zSnowflake, z.number()).optional(),
+  plugins: z.record(z.string(), z.unknown()).optional(),
 });
-export const PartialZeppelinGuildConfigSchema = t.partial(ZeppelinGuildConfigSchema.props);
-
-export interface ZeppelinGlobalConfig extends BaseConfig {
-  url: string;
-  owners?: string[];
-}
-
-export const ZeppelinGlobalConfigSchema = t.type({
-  url: t.string,
-  owners: t.array(t.string),
-  plugins: t.record(t.string, t.unknown),
-});
-
-export type TZeppelinKnub = Knub;
 
 /**
  * Wrapper for the string type that indicates the text will be parsed as Markdown later
  */
 export type TMarkdown = string;
 
-export interface ZeppelinPluginInfo {
-  prettyName: string;
+export interface ZeppelinGuildPluginInfo {
+  plugin: GuildPluginBlueprint<any, any>;
+  docs: ZeppelinPluginDocs;
+  autoload?: boolean;
+}
+
+export interface ZeppelinGlobalPluginInfo {
+  plugin: GlobalPluginBlueprint<any, any>;
+  docs: ZeppelinPluginDocs;
+}
+
+export type DocsPluginType = "stable" | "legacy" | "internal";
+
+export interface ZeppelinPluginDocs {
+  type: DocsPluginType;
+  configSchema: z.ZodType;
+
+  prettyName?: string;
   description?: TMarkdown;
   usageGuide?: TMarkdown;
   configurationGuide?: TMarkdown;
-  legacy?: boolean;
 }
 
 export interface CommandInfo {

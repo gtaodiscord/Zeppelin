@@ -1,20 +1,20 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand } from "knub";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { GuildSlowmodes } from "../../data/GuildSlowmodes";
-import { SlowmodeChannel } from "../../data/entities/SlowmodeChannel";
+import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand, pluginUtils } from "vety";
+import { z } from "zod";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { GuildSlowmodes } from "../../data/GuildSlowmodes.js";
+import { SlowmodeChannel } from "../../data/entities/SlowmodeChannel.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
 
-export const ConfigSchema = t.type({
-  use_native_slowmode: t.boolean,
+export const zSlowmodeConfig = z.strictObject({
+  use_native_slowmode: z.boolean().default(true),
 
-  can_manage: t.boolean,
-  is_affected: t.boolean,
+  can_manage: z.boolean().default(false),
+  is_affected: z.boolean().default(true),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface SlowmodePluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zSlowmodeConfig;
   state: {
     slowmodes: GuildSlowmodes;
     savedMessages: GuildSavedMessages;
@@ -22,6 +22,7 @@ export interface SlowmodePluginType extends BasePluginType {
     clearInterval: NodeJS.Timeout;
     serverLogs: GuildLogs;
     channelSlowmodeCache: Map<string, SlowmodeChannel | null>;
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
 
     onMessageCreateFn;
   };

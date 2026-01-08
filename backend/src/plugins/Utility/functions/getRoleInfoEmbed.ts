@@ -1,16 +1,12 @@
 import { APIEmbed, PermissionFlagsBits, Role } from "discord.js";
-import { GuildPluginData } from "knub";
-import { EmbedWith, preEmbedPadding, trimLines } from "../../../utils";
+import { GuildPluginData } from "vety";
+import { EmbedWith, preEmbedPadding, trimLines } from "../../../utils.js";
 import { PERMISSION_NAMES } from "../../../utils/permissionNames.js";
-import { UtilityPluginType } from "../types";
+import { UtilityPluginType } from "../types.js";
 
 const MENTION_ICON = "https://cdn.discordapp.com/attachments/705009450855039042/839284872152481792/mention.png";
 
-export async function getRoleInfoEmbed(
-  pluginData: GuildPluginData<UtilityPluginType>,
-  role: Role,
-  requestMemberId?: string,
-): Promise<APIEmbed> {
+export async function getRoleInfoEmbed(pluginData: GuildPluginData<UtilityPluginType>, role: Role): Promise<APIEmbed> {
   const embed: EmbedWith<"fields" | "author" | "color"> = {
     fields: [],
     author: {

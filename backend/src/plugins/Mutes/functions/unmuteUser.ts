@@ -1,19 +1,19 @@
 import { Snowflake } from "discord.js";
-import humanizeDuration from "humanize-duration";
-import { GuildPluginData } from "knub";
-import { CaseTypes } from "../../../data/CaseTypes";
-import { AddMuteParams } from "../../../data/GuildMutes";
-import { MuteTypes } from "../../../data/MuteTypes";
-import { Mute } from "../../../data/entities/Mute";
-import { resolveMember, resolveUser } from "../../../utils";
-import { CasesPlugin } from "../../Cases/CasesPlugin";
-import { CaseArgs } from "../../Cases/types";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { MutesPluginType, UnmuteResult } from "../types";
-import { clearMute } from "./clearMute";
-import { getDefaultMuteType } from "./getDefaultMuteType";
-import { getTimeoutExpiryTime } from "./getTimeoutExpiryTime";
-import { memberHasMutedRole } from "./memberHasMutedRole";
+import { GuildPluginData } from "vety";
+import { CaseTypes } from "../../../data/CaseTypes.js";
+import { AddMuteParams } from "../../../data/GuildMutes.js";
+import { MuteTypes } from "../../../data/MuteTypes.js";
+import { Mute } from "../../../data/entities/Mute.js";
+import { humanizeDuration } from "../../../humanizeDuration.js";
+import { noop, resolveMember, resolveUser } from "../../../utils.js";
+import { CasesPlugin } from "../../Cases/CasesPlugin.js";
+import { CaseArgs } from "../../Cases/types.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { MutesPluginType, UnmuteResult } from "../types.js";
+import { clearMute } from "./clearMute.js";
+import { getDefaultMuteType } from "./getDefaultMuteType.js";
+import { getTimeoutExpiryTime } from "./getTimeoutExpiryTime.js";
+import { memberHasMutedRole } from "./memberHasMutedRole.js";
 
 export async function unmuteUser(
   pluginData: GuildPluginData<MutesPluginType>,
@@ -22,7 +22,7 @@ export async function unmuteUser(
   caseArgs: Partial<CaseArgs> = {},
 ): Promise<UnmuteResult | null> {
   const existingMute = await pluginData.state.mutes.findExistingMuteForUserId(userId);
-  const user = await resolveUser(pluginData.client, userId);
+  const user = await resolveUser(pluginData.client, userId, "Mutes:unmuteUser");
   const member = await resolveMember(pluginData.client, pluginData.guild, userId, true); // Grab the fresh member so we don't have stale role info
   const modId = caseArgs.modId || pluginData.client.user!.id;
 
@@ -54,8 +54,10 @@ export async function unmuteUser(
     }
 
     // Update timeout
-    if (existingMute?.type === MuteTypes.Timeout || createdMute?.type === MuteTypes.Timeout) {
-      await member?.disableCommunicationUntil(timeoutExpiresAt);
+    if (member && (existingMute?.type === MuteTypes.Timeout || createdMute?.type === MuteTypes.Timeout)) {
+      if (!member.moderatable) return null;
+
+      await member.disableCommunicationUntil(timeoutExpiresAt).catch(noop);
       await pluginData.state.mutes.updateTimeoutExpiresAt(userId, timeoutExpiresAt);
     }
   } else {

@@ -1,16 +1,17 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand } from "knub";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
+import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand, pluginUtils } from "vety";
+import { z } from "zod";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
 
-export const ConfigSchema = t.type({
-  can_manage: t.boolean,
+export const zMessageSaverConfig = z.strictObject({
+  can_manage: z.boolean().default(false),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface MessageSaverPluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zMessageSaverConfig;
   state: {
     savedMessages: GuildSavedMessages;
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
   };
 }
 

@@ -1,10 +1,11 @@
 import { MessageCreateOptions } from "discord.js";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { sendErrorMessage } from "../../../pluginUtils";
-import { TemplateParseError } from "../../../templateFormatter";
-import { memberToTemplateSafeMember, userToTemplateSafeUser } from "../../../utils/templateSafeObjects";
-import { tagsCmd } from "../types";
-import { renderTagBody } from "../util/renderTagBody";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { logger } from "../../../logger.js";
+import { resolveMessageMember } from "../../../pluginUtils.js";
+import { TemplateParseError } from "../../../templateFormatter.js";
+import { memberToTemplateSafeMember, userToTemplateSafeUser } from "../../../utils/templateSafeObjects.js";
+import { tagsCmd } from "../types.js";
+import { renderTagBody } from "../util/renderTagBody.js";
 
 export const TagEvalCmd = tagsCmd({
   trigger: "tag eval",
@@ -15,31 +16,35 @@ export const TagEvalCmd = tagsCmd({
   },
 
   async run({ message: msg, args, pluginData }) {
+    const authorMember = await resolveMessageMember(msg);
     try {
       const rendered = (await renderTagBody(
         pluginData,
         args.body,
         [],
         {
-          member: memberToTemplateSafeMember(msg.member),
-          user: userToTemplateSafeUser(msg.member.user),
+          member: memberToTemplateSafeMember(authorMember),
+          user: userToTemplateSafeUser(msg.author),
         },
         { member: msg.member },
       )) as MessageCreateOptions;
 
       if (!rendered.content && !rendered.embeds?.length) {
-        sendErrorMessage(pluginData, msg.channel, "Evaluation resulted in an empty text");
+        void pluginData.state.common.sendErrorMessage(msg, "Evaluation resulted in an empty text");
         return;
       }
 
       msg.channel.send(rendered);
     } catch (e) {
-      if (e instanceof TemplateParseError) {
-        sendErrorMessage(pluginData, msg.channel, `Failed to render tag: ${e.message}`);
-        return;
+      const errorMessage = e instanceof TemplateParseError ? e.message : "Internal error";
+
+      void pluginData.state.common.sendErrorMessage(msg, `Failed to render tag: ${errorMessage}`);
+
+      if (!(e instanceof TemplateParseError)) {
+        logger.warn(`Internal error evaluating tag in ${pluginData.guild.id}: ${e}`);
       }
 
-      throw e;
+      return;
     }
   },
 });

@@ -12,21 +12,21 @@ import {
   CommandContext,
   messageCommandBaseTypeConverters,
   TypeConversionError,
-} from "knub";
+} from "vety";
 import { createTypeHelper } from "knub-command-manager";
 import {
   channelMentionRegex,
   convertDelayStringToMS,
+  inputPatternToRegExp,
   isValidSnowflake,
   resolveMember,
   resolveUser,
   resolveUserId,
   roleMentionRegex,
   UnknownUser,
-} from "./utils";
-import { isValidTimezone } from "./utils/isValidTimezone";
-import { MessageTarget, resolveMessageTarget } from "./utils/resolveMessageTarget";
-import { inputPatternToRegExp } from "./validatorUtils";
+} from "./utils.js";
+import { isValidTimezone } from "./utils/isValidTimezone.js";
+import { MessageTarget, resolveMessageTarget } from "./utils/resolveMessageTarget.js";
 
 export const commandTypes = {
   ...messageCommandBaseTypeConverters,
@@ -41,7 +41,7 @@ export const commandTypes = {
   },
 
   async resolvedUser(value, context: CommandContext<any>) {
-    const result = await resolveUser(context.pluginData.client, value);
+    const result = await resolveUser(context.pluginData.client, value, "commandTypes:resolvedUser");
     if (result == null || result instanceof UnknownUser) {
       throw new TypeConversionError(`User \`${escapeCodeBlock(value)}\` was not found`);
     }
@@ -49,7 +49,7 @@ export const commandTypes = {
   },
 
   async resolvedUserLoose(value, context: CommandContext<any>) {
-    const result = await resolveUser(context.pluginData.client, value);
+    const result = await resolveUser(context.pluginData.client, value, "commandTypes:resolvedUserLoose");
     if (result == null) {
       throw new TypeConversionError(`Invalid user: \`${escapeCodeBlock(value)}\``);
     }

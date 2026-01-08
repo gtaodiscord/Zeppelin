@@ -1,13 +1,14 @@
-import { getRepository, Repository } from "typeorm";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { AntiraidLevel } from "./entities/AntiraidLevel";
+import { Repository } from "typeorm";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { dataSource } from "./dataSource.js";
+import { AntiraidLevel } from "./entities/AntiraidLevel.js";
 
 export class GuildAntiraidLevels extends BaseGuildRepository {
   protected antiraidLevels: Repository<AntiraidLevel>;
 
   constructor(guildId: string) {
     super(guildId);
-    this.antiraidLevels = getRepository(AntiraidLevel);
+    this.antiraidLevels = dataSource.getRepository(AntiraidLevel);
   }
 
   async get() {

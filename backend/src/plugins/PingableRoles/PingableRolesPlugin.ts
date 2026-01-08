@@ -1,16 +1,15 @@
-import { PluginOptions } from "knub";
-import { GuildPingableRoles } from "../../data/GuildPingableRoles";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { PingableRoleDisableCmd } from "./commands/PingableRoleDisableCmd";
-import { PingableRoleEnableCmd } from "./commands/PingableRoleEnableCmd";
-import { ConfigSchema, PingableRolesPluginType } from "./types";
+import { guildPlugin } from "vety";
+import { GuildPingableRoles } from "../../data/GuildPingableRoles.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { PingableRoleDisableCmd } from "./commands/PingableRoleDisableCmd.js";
+import { PingableRoleEnableCmd } from "./commands/PingableRoleEnableCmd.js";
+import { PingableRolesPluginType, zPingableRolesConfig } from "./types.js";
 
-const defaultOptions: PluginOptions<PingableRolesPluginType> = {
-  config: {
-    can_manage: false,
-  },
-  overrides: [
+export const PingableRolesPlugin = guildPlugin<PingableRolesPluginType>()({
+  name: "pingable_roles",
+
+  configSchema: zPingableRolesConfig,
+  defaultOverrides: [
     {
       level: ">=100",
       config: {
@@ -18,18 +17,6 @@ const defaultOptions: PluginOptions<PingableRolesPluginType> = {
       },
     },
   ],
-};
-
-export const PingableRolesPlugin = zeppelinGuildPlugin<PingableRolesPluginType>()({
-  name: "pingable_roles",
-  showInDocs: true,
-  info: {
-    prettyName: "Pingable roles",
-    configSchema: ConfigSchema,
-  },
-
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
 
   // prettier-ignore
   messageCommands: [
@@ -50,5 +37,9 @@ export const PingableRolesPlugin = zeppelinGuildPlugin<PingableRolesPluginType>(
     state.pingableRoles = GuildPingableRoles.getGuildInstance(guild.id);
     state.cache = new Map();
     state.timeouts = new Map();
+  },
+
+  beforeStart(pluginData) {
+    pluginData.state.common = pluginData.getPlugin(CommonPlugin);
   },
 });

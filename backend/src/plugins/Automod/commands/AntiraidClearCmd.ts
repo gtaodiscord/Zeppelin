@@ -1,7 +1,6 @@
-import { guildPluginMessageCommand } from "knub";
-import { sendSuccessMessage } from "../../../pluginUtils";
-import { setAntiraidLevel } from "../functions/setAntiraidLevel";
-import { AutomodPluginType } from "../types";
+import { guildPluginMessageCommand } from "vety";
+import { setAntiraidLevel } from "../functions/setAntiraidLevel.js";
+import { AutomodPluginType } from "../types.js";
 
 export const AntiraidClearCmd = guildPluginMessageCommand<AutomodPluginType>()({
   trigger: ["antiraid clear", "antiraid reset", "antiraid none", "antiraid off"],
@@ -9,6 +8,6 @@ export const AntiraidClearCmd = guildPluginMessageCommand<AutomodPluginType>()({
 
   async run({ pluginData, message }) {
     await setAntiraidLevel(pluginData, null, message.author);
-    sendSuccessMessage(pluginData, message.channel, "Anti-raid turned **off**");
+    void pluginData.state.common.sendSuccessMessage(message, "Anti-raid turned **off**");
   },
 });

@@ -1,8 +1,7 @@
 import { APIEmbed, ChannelType } from "discord.js";
-import { GuildPluginData } from "knub";
+import { GuildPluginData } from "vety";
 import {
   EmbedWith,
-  GroupDMInvite,
   formatNumber,
   inviteHasCounts,
   isGroupDMInvite,
@@ -11,15 +10,15 @@ import {
   renderUsername,
   resolveInvite,
   trimLines,
-} from "../../../utils";
-import { snowflakeToTimestamp } from "../../../utils/snowflakeToTimestamp";
-import { UtilityPluginType } from "../types";
+} from "../../../utils.js";
+import { snowflakeToTimestamp } from "../../../utils/snowflakeToTimestamp.js";
+import { UtilityPluginType } from "../types.js";
 
 export async function getInviteInfoEmbed(
   pluginData: GuildPluginData<UtilityPluginType>,
   inviteCode: string,
 ): Promise<APIEmbed | null> {
-  let invite = await resolveInvite(pluginData.client, inviteCode, true);
+  const invite = await resolveInvite(pluginData.client, inviteCode, true);
   if (!invite) {
     return null;
   }
@@ -85,7 +84,7 @@ export async function getInviteInfoEmbed(
       embed.fields.push({
         name: preEmbedPadding + "Invite creator",
         value: trimLines(`
-          Name: **${renderUsername(invite.inviter.username, invite.inviter.discriminator)}**
+          Name: **${renderUsername(invite.inviter)}**
           ID: \`${invite.inviter.id}\`
           Mention: <@!${invite.inviter.id}>
         `),
@@ -100,9 +99,8 @@ export async function getInviteInfoEmbed(
       fields: [],
     };
 
-    invite = invite as GroupDMInvite;
     embed.author = {
-      name: invite.channel!.name ? `Group DM invite:  ${invite.channel!.name}` : `Group DM invite`,
+      name: invite.channel.name ? `Group DM invite:  ${invite.channel.name}` : `Group DM invite`,
       url: `https://discord.gg/${invite.code}`,
     }; // FIXME pending invite re-think
 

@@ -5,6 +5,7 @@ import {
   GuildMember,
   Message,
   PartialGuildMember,
+  PartialUser,
   Role,
   Snowflake,
   StageInstance,
@@ -12,21 +13,21 @@ import {
   StickerFormatType,
   User,
 } from "discord.js";
-import { GuildPluginData } from "knub";
-import { UnknownUser, renderUserUsername } from "src/utils";
-import { Case } from "../data/entities/Case";
+import { GuildPluginData } from "vety";
+import { Case } from "../data/entities/Case.js";
 import {
   ISavedMessageAttachmentData,
   ISavedMessageData,
   ISavedMessageEmbedData,
   ISavedMessageStickerData,
   SavedMessage,
-} from "../data/entities/SavedMessage";
+} from "../data/entities/SavedMessage.js";
 import {
   TemplateSafeValueContainer,
   TypedTemplateSafeValueContainer,
   ingestDataIntoTemplateSafeValueContainer,
-} from "../templateFormatter";
+} from "../templateFormatter.js";
+import { UnknownUser, renderUsername } from "../utils.js";
 
 type InputProps<T> = Omit<
   {
@@ -49,9 +50,10 @@ export class TemplateSafeUser extends TemplateSafeValueContainer {
   id: Snowflake | string;
   username: string;
   discriminator: string;
+  globalName?: string;
   mention: string;
   tag: string;
-  avatarURL?: string;
+  avatarURL: string;
   bot?: boolean;
   createdAt?: number;
   renderedUsername: string;
@@ -91,7 +93,7 @@ export class TemplateSafeMember extends TemplateSafeUser {
   nick: string;
   roles: TemplateSafeRole[];
   joinedAt?: number;
-  // guildAvatarURL: string, Once DJS supports per-server avatars
+  guildAvatarURL: string;
   guildName: string;
 
   constructor(data: InputProps<TemplateSafeMember>) {
@@ -189,6 +191,7 @@ export class TemplateSafeSavedMessageData extends TemplateSafeValueContainer {
   embeds?: Array<TypedTemplateSafeValueContainer<ISavedMessageEmbedData>>;
   stickers?: Array<TypedTemplateSafeValueContainer<ISavedMessageStickerData>>;
   timestamp: number;
+  reference?: TypedTemplateSafeValueContainer<ISavedMessageData["reference"]>;
 
   constructor(data: InputProps<TemplateSafeSavedMessageData>) {
     super();
@@ -241,28 +244,29 @@ export function guildToTemplateSafeGuild(guild: Guild): TemplateSafeGuild {
   });
 }
 
-export function userToTemplateSafeUser(user: User | UnknownUser): TemplateSafeUser {
-  if (user instanceof UnknownUser) {
+export function userToTemplateSafeUser(user: User | UnknownUser | PartialUser): TemplateSafeUser {
+  if (user instanceof User) {
     return new TemplateSafeUser({
       id: user.id,
-      username: "Unknown",
-      discriminator: "0000",
+      username: user.username,
+      discriminator: user.discriminator,
+      globalName: user.globalName,
       mention: `<@${user.id}>`,
-      tag: "Unknown#0000",
-      renderedUsername: renderUserUsername(user),
+      tag: user.tag,
+      avatarURL: user.displayAvatarURL?.() || "",
+      bot: user.bot,
+      createdAt: user.createdTimestamp,
+      renderedUsername: renderUsername(user),
     });
   }
 
   return new TemplateSafeUser({
     id: user.id,
-    username: user.username,
-    discriminator: user.discriminator,
+    username: user.username || "Unknown",
+    discriminator: user.discriminator || "0000",
     mention: `<@${user.id}>`,
-    tag: user.tag,
-    avatarURL: user.displayAvatarURL?.(),
-    bot: user.bot,
-    createdAt: user.createdTimestamp,
-    renderedUsername: renderUserUsername(user),
+    tag: user.tag || "Unknown#0000",
+    renderedUsername: user.tag || "Unknown",
   });
 }
 
@@ -285,6 +289,7 @@ export function memberToTemplateSafeMember(member: GuildMember | PartialGuildMem
     nick: member.nickname ?? "*None*",
     roles: [...member.roles.cache.mapValues((r) => roleToTemplateSafeRole(r)).values()],
     joinedAt: member.joinedTimestamp ?? undefined,
+    guildAvatarURL: member.displayAvatarURL(),
     guildName: member.guild.name,
   });
 }
@@ -441,6 +446,14 @@ export function savedMessageToTemplateSafeSavedMessage(savedMessage: SavedMessag
       ),
 
       timestamp: savedMessage.data.timestamp,
+
+      reference: savedMessage.data.reference
+        ? (new TemplateSafeValueContainer({
+            messageId: savedMessage.data.reference.messageId ?? null,
+            channelId: savedMessage.data.reference.channelId ?? null,
+            guildId: savedMessage.data.reference.guildId ?? null,
+          }) as TypedTemplateSafeValueContainer<ISavedMessageData["reference"]>)
+        : undefined,
     }),
   });
 }

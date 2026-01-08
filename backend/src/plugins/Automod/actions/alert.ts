@@ -1,38 +1,40 @@
 import { Snowflake } from "discord.js";
-import * as t from "io-ts";
-import { erisAllowedMentionsToDjsMentionOptions } from "src/utils/erisAllowedMentionsToDjsMentionOptions";
-import { LogType } from "../../../data/LogType";
+import { z } from "zod";
+import { LogType } from "../../../data/LogType.js";
 import {
   createTypedTemplateSafeValueContainer,
   renderTemplate,
   TemplateParseError,
   TemplateSafeValueContainer,
-} from "../../../templateFormatter";
+} from "../../../templateFormatter.js";
 import {
   chunkMessageLines,
   isTruthy,
   messageLink,
-  tAllowedMentions,
-  tNormalizedNullOptional,
   validateAndParseMessageContent,
   verboseChannelMention,
-} from "../../../utils";
-import { messageIsEmpty } from "../../../utils/messageIsEmpty";
-import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects";
-import { InternalPosterPlugin } from "../../InternalPoster/InternalPosterPlugin";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { automodAction } from "../helpers";
+  zAllowedMentions,
+  zBoundedCharacters,
+  zNullishToUndefined,
+  zSnowflake,
+} from "../../../utils.js";
+import { erisAllowedMentionsToDjsMentionOptions } from "../../../utils/erisAllowedMentionsToDjsMentionOptions.js";
+import { messageIsEmpty } from "../../../utils/messageIsEmpty.js";
+import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects.js";
+import { InternalPosterPlugin } from "../../InternalPoster/InternalPosterPlugin.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { automodAction } from "../helpers.js";
+
+const configSchema = z.object({
+  channel: zSnowflake,
+  text: zBoundedCharacters(0, 4000),
+  allowed_mentions: zNullishToUndefined(zAllowedMentions.nullable().default(null)),
+});
 
 export const AlertAction = automodAction({
-  configType: t.type({
-    channel: t.string,
-    text: t.string,
-    allowed_mentions: tNormalizedNullOptional(tAllowedMentions),
-  }),
+  configSchema,
 
-  defaultConfig: {},
-
-  async apply({ pluginData, contexts, actionConfig, ruleName, matchResult }) {
+  async apply({ pluginData, contexts, actionConfig, ruleName, matchResult, prettyName }) {
     const channel = pluginData.guild.channels.cache.get(actionConfig.channel as Snowflake);
     const logs = pluginData.getPlugin(LogsPlugin);
 
@@ -53,6 +55,7 @@ export const AlertAction = automodAction({
           users: safeUsers,
           actionsTaken,
           matchSummary: matchResult.summary ?? "",
+          prettyName,
         }),
       );
 
@@ -67,6 +70,7 @@ export const AlertAction = automodAction({
             text,
             actionsTaken,
             matchSummary: matchResult.summary,
+            prettyName,
             messageLink: theMessageLink,
             logMessage: validateAndParseMessageContent(logMessage)?.content,
           }),

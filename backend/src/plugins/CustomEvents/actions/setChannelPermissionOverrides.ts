@@ -1,23 +1,26 @@
 import { PermissionsBitField, PermissionsString, Snowflake } from "discord.js";
-import * as t from "io-ts";
-import { GuildPluginData } from "knub";
-import { TemplateSafeValueContainer } from "../../../templateFormatter";
-import { ActionError } from "../ActionError";
-import { CustomEventsPluginType, TCustomEvent } from "../types";
+import { GuildPluginData } from "vety";
+import { z } from "zod";
+import { TemplateSafeValueContainer } from "../../../templateFormatter.js";
+import { zBoundedCharacters, zSnowflake } from "../../../utils.js";
+import { ActionError } from "../ActionError.js";
+import { CustomEventsPluginType, TCustomEvent } from "../types.js";
 
-export const SetChannelPermissionOverridesAction = t.type({
-  type: t.literal("set_channel_permission_overrides"),
-  channel: t.string,
-  overrides: t.array(
-    t.type({
-      type: t.union([t.literal("member"), t.literal("role")]),
-      id: t.string,
-      allow: t.number,
-      deny: t.number,
-    }),
-  ),
+export const zSetChannelPermissionOverridesAction = z.strictObject({
+  type: z.literal("set_channel_permission_overrides"),
+  channel: zBoundedCharacters(0, 100),
+  overrides: z
+    .array(
+      z.strictObject({
+        type: z.union([z.literal("member"), z.literal("role")]),
+        id: zSnowflake,
+        allow: z.number(),
+        deny: z.number(),
+      }),
+    )
+    .max(15),
 });
-export type TSetChannelPermissionOverridesAction = t.TypeOf<typeof SetChannelPermissionOverridesAction>;
+export type TSetChannelPermissionOverridesAction = z.infer<typeof zSetChannelPermissionOverridesAction>;
 
 export async function setChannelPermissionOverridesAction(
   pluginData: GuildPluginData<CustomEventsPluginType>,

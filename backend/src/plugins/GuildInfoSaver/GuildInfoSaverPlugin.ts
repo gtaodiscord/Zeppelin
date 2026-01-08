@@ -1,18 +1,14 @@
 import { Guild } from "discord.js";
-import * as t from "io-ts";
-import { guildPluginEventListener } from "knub";
-import { AllowedGuilds } from "../../data/AllowedGuilds";
-import { ApiPermissionAssignments } from "../../data/ApiPermissionAssignments";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { MINUTES } from "../../utils";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { GuildInfoSaverPluginType } from "./types";
+import { guildPlugin, guildPluginEventListener } from "vety";
+import { AllowedGuilds } from "../../data/AllowedGuilds.js";
+import { ApiPermissionAssignments } from "../../data/ApiPermissionAssignments.js";
+import { MINUTES } from "../../utils.js";
+import { GuildInfoSaverPluginType, zGuildInfoSaverConfig } from "./types.js";
 
-export const GuildInfoSaverPlugin = zeppelinGuildPlugin<GuildInfoSaverPluginType>()({
+export const GuildInfoSaverPlugin = guildPlugin<GuildInfoSaverPluginType>()({
   name: "guild_info_saver",
-  showInDocs: false,
 
-  configParser: makeIoTsConfigParser(t.type({})),
+  configSchema: zGuildInfoSaverConfig,
 
   events: [
     guildPluginEventListener({

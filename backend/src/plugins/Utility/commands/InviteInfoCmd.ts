@@ -1,8 +1,7 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { sendErrorMessage } from "../../../pluginUtils";
-import { parseInviteCodeInput } from "../../../utils";
-import { getInviteInfoEmbed } from "../functions/getInviteInfoEmbed";
-import { utilityCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { parseInviteCodeInput } from "../../../utils.js";
+import { getInviteInfoEmbed } from "../functions/getInviteInfoEmbed.js";
+import { utilityCmd } from "../types.js";
 
 export const InviteInfoCmd = utilityCmd({
   trigger: ["invite", "inviteinfo"],
@@ -18,7 +17,7 @@ export const InviteInfoCmd = utilityCmd({
     const inviteCode = parseInviteCodeInput(args.inviteCode);
     const embed = await getInviteInfoEmbed(pluginData, inviteCode);
     if (!embed) {
-      sendErrorMessage(pluginData, message.channel, "Unknown invite");
+      void pluginData.state.common.sendErrorMessage(message, "Unknown invite");
       return;
     }
 

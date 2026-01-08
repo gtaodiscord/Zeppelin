@@ -1,22 +1,22 @@
 import { GuildTextBasedChannel, Snowflake, TextChannel } from "discord.js";
-import { GuildPluginData } from "knub";
+import { GuildPluginData } from "vety";
 import moment from "moment-timezone";
-import { ERRORS, RecoverablePluginError } from "../../../RecoverablePluginError";
-import { CaseTypes } from "../../../data/CaseTypes";
-import { LogType } from "../../../data/LogType";
-import { SavedMessage } from "../../../data/entities/SavedMessage";
-import { logger } from "../../../logger";
-import { CasesPlugin } from "../../../plugins/Cases/CasesPlugin";
-import { MutesPlugin } from "../../../plugins/Mutes/MutesPlugin";
-import { MuteResult } from "../../../plugins/Mutes/types";
-import { DBDateFormat, convertDelayStringToMS, noop, resolveMember, trimLines } from "../../../utils";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { RecentActionType, SpamPluginType, TBaseSingleSpamConfig } from "../types";
-import { addRecentAction } from "./addRecentAction";
-import { clearRecentUserActions } from "./clearRecentUserActions";
-import { getRecentActionCount } from "./getRecentActionCount";
-import { getRecentActions } from "./getRecentActions";
-import { saveSpamArchives } from "./saveSpamArchives";
+import { ERRORS, RecoverablePluginError } from "../../../RecoverablePluginError.js";
+import { CaseTypes } from "../../../data/CaseTypes.js";
+import { LogType } from "../../../data/LogType.js";
+import { SavedMessage } from "../../../data/entities/SavedMessage.js";
+import { logger } from "../../../logger.js";
+import { CasesPlugin } from "../../../plugins/Cases/CasesPlugin.js";
+import { MutesPlugin } from "../../../plugins/Mutes/MutesPlugin.js";
+import { MuteResult } from "../../../plugins/Mutes/types.js";
+import { DBDateFormat, convertDelayStringToMS, noop, resolveMember, trimLines } from "../../../utils.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { RecentActionType, SpamPluginType, TBaseSingleSpamConfig } from "../types.js";
+import { addRecentAction } from "./addRecentAction.js";
+import { clearRecentUserActions } from "./clearRecentUserActions.js";
+import { getRecentActionCount } from "./getRecentActionCount.js";
+import { getRecentActions } from "./getRecentActions.js";
+import { saveSpamArchives } from "./saveSpamArchives.js";
 
 export async function logAndDetectMessageSpam(
   pluginData: GuildPluginData<SpamPluginType>,
@@ -76,10 +76,13 @@ export async function logAndDetectMessageSpam(
             (spamConfig.mute_time && convertDelayStringToMS(spamConfig.mute_time.toString())) ?? 120 * 1000;
 
           try {
+            const reason = "Automatic spam detection";
+
             muteResult = await mutesPlugin.muteUser(
               member.id,
               muteTime,
-              "Automatic spam detection",
+              reason,
+              reason,
               {
                 caseArgs: {
                   modId: pluginData.client.user!.id,

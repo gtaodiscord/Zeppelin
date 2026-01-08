@@ -1,8 +1,8 @@
-import { GuildPluginData } from "knub";
-import { resolveMember, resolveUser, UnknownUser } from "../../../utils";
-import { ModActionType } from "../../ModActions/types";
-import { runAutomod } from "../functions/runAutomod";
-import { AutomodContext, AutomodPluginType } from "../types";
+import { GuildPluginData } from "vety";
+import { resolveMember, resolveUser, UnknownUser } from "../../../utils.js";
+import { ModActionType } from "../../ModActions/types.js";
+import { runAutomod } from "../functions/runAutomod.js";
+import { AutomodContext, AutomodPluginType } from "../types.js";
 
 export async function runAutomodOnModAction(
   pluginData: GuildPluginData<AutomodPluginType>,
@@ -12,7 +12,7 @@ export async function runAutomodOnModAction(
   isAutomodAction = false,
 ) {
   const [user, member] = await Promise.all([
-    resolveUser(pluginData.client, userId),
+    resolveUser(pluginData.client, userId, "Automod:runAutomodOnModAction"),
     resolveMember(pluginData.client, pluginData.guild, userId),
   ]);
 

@@ -1,13 +1,14 @@
-import { getRepository, Repository } from "typeorm";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { ScheduledPost } from "./entities/ScheduledPost";
+import { Repository } from "typeorm";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { dataSource } from "./dataSource.js";
+import { ScheduledPost } from "./entities/ScheduledPost.js";
 
 export class GuildScheduledPosts extends BaseGuildRepository {
   private scheduledPosts: Repository<ScheduledPost>;
 
   constructor(guildId) {
     super(guildId);
-    this.scheduledPosts = getRepository(ScheduledPost);
+    this.scheduledPosts = dataSource.getRepository(ScheduledPost);
   }
 
   all(): Promise<ScheduledPost[]> {
@@ -23,7 +24,11 @@ export class GuildScheduledPosts extends BaseGuildRepository {
   }
 
   find(id: number) {
-    return this.scheduledPosts.findOne({ id });
+    return this.scheduledPosts.findOne({
+      where: {
+        id,
+      },
+    });
   }
 
   async delete(id) {

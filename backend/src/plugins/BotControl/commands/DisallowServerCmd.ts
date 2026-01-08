@@ -1,8 +1,8 @@
 import { Snowflake } from "discord.js";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { isStaffPreFilter, sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils";
-import { noop } from "../../../utils";
-import { botControlCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { isStaffPreFilter } from "../../../pluginUtils.js";
+import { noop } from "../../../utils.js";
+import { botControlCmd } from "../types.js";
 
 export const DisallowServerCmd = botControlCmd({
   trigger: ["disallow_server", "disallowserver", "remove_server", "removeserver"],
@@ -18,7 +18,7 @@ export const DisallowServerCmd = botControlCmd({
   async run({ pluginData, message: msg, args }) {
     const existing = await pluginData.state.allowedGuilds.find(args.guildId);
     if (!existing) {
-      sendErrorMessage(pluginData, msg.channel, "That server is not allowed in the first place!");
+      void msg.channel.send("That server is not allowed in the first place!");
       return;
     }
 
@@ -27,6 +27,6 @@ export const DisallowServerCmd = botControlCmd({
       .get(args.guildId as Snowflake)
       ?.leave()
       .catch(noop);
-    sendSuccessMessage(pluginData, msg.channel, "Server removed!");
+    void msg.channel.send("Server removed!");
   },
 });

@@ -1,27 +1,26 @@
 import { ChannelType, GuildTextBasedChannel, Snowflake } from "discord.js";
-import * as t from "io-ts";
-import { convertDelayStringToMS, isDiscordAPIError, tDelayString, tNullable } from "../../../utils";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { automodAction } from "../helpers";
+import { z } from "zod";
+import { convertDelayStringToMS, isDiscordAPIError, zDelayString, zSnowflake } from "../../../utils.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { automodAction } from "../helpers.js";
 
 export const SetSlowmodeAction = automodAction({
-  configType: t.type({
-    channels: t.array(t.string),
-    duration: tNullable(tDelayString),
+  configSchema: z.strictObject({
+    channels: z.array(zSnowflake).nullable().default([]),
+    duration: zDelayString.nullable().default("10s"),
   }),
 
-  defaultConfig: {
-    duration: "10s",
-  },
-
-  async apply({ pluginData, actionConfig }) {
+  async apply({ pluginData, actionConfig, contexts }) {
     const slowmodeMs = Math.max(actionConfig.duration ? convertDelayStringToMS(actionConfig.duration)! : 0, 0);
-
-    for (const channelId of actionConfig.channels) {
+    const channels: Snowflake[] = actionConfig.channels ?? [];
+    if (channels.length === 0) {
+      channels.push(...contexts.filter((c) => c.message?.channel_id).map((c) => c.message!.channel_id));
+    }
+    for (const channelId of channels) {
       const channel = pluginData.guild.channels.cache.get(channelId as Snowflake);
-
       // Only text channels and text channels within categories support slowmodes
-      if (!channel || (!channel.isTextBased() && channel.type !== ChannelType.GuildCategory)) {
+
+      if (!channel?.isTextBased() && channel?.type !== ChannelType.GuildCategory) {
         continue;
       }
 

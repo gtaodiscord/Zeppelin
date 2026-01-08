@@ -1,47 +1,32 @@
-import { PluginOptions } from "knub";
-import { GuildAutoReactions } from "../../data/GuildAutoReactions";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { trimPluginDescription } from "../../utils";
-import { LogsPlugin } from "../Logs/LogsPlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { DisableAutoReactionsCmd } from "./commands/DisableAutoReactionsCmd";
-import { NewAutoReactionsCmd } from "./commands/NewAutoReactionsCmd";
-import { AddReactionsEvt } from "./events/AddReactionsEvt";
-import { AutoReactionsPluginType, ConfigSchema } from "./types";
+import { PluginOverride, guildPlugin } from "vety";
+import { GuildAutoReactions } from "../../data/GuildAutoReactions.js";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { LogsPlugin } from "../Logs/LogsPlugin.js";
+import { DisableAutoReactionsCmd } from "./commands/DisableAutoReactionsCmd.js";
+import { NewAutoReactionsCmd } from "./commands/NewAutoReactionsCmd.js";
+import { AddReactionsEvt } from "./events/AddReactionsEvt.js";
+import { AutoReactionsPluginType, zAutoReactionsConfig } from "./types.js";
 
-const defaultOptions: PluginOptions<AutoReactionsPluginType> = {
-  config: {
-    can_manage: false,
-  },
-  overrides: [
-    {
-      level: ">=100",
-      config: {
-        can_manage: true,
-      },
+const defaultOverrides: Array<PluginOverride<AutoReactionsPluginType>> = [
+  {
+    level: ">=100",
+    config: {
+      can_manage: true,
     },
-  ],
-};
-
-export const AutoReactionsPlugin = zeppelinGuildPlugin<AutoReactionsPluginType>()({
-  name: "auto_reactions",
-  showInDocs: true,
-  info: {
-    prettyName: "Auto-reactions",
-    description: trimPluginDescription(`
-      Allows setting up automatic reactions to all new messages on a channel
-    `),
-    configSchema: ConfigSchema,
   },
+];
+
+export const AutoReactionsPlugin = guildPlugin<AutoReactionsPluginType>()({
+  name: "auto_reactions",
 
   // prettier-ignore
   dependencies: () => [
     LogsPlugin,
   ],
 
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
+  configSchema: zAutoReactionsConfig,
+  defaultOverrides,
 
   // prettier-ignore
   messageCommands: [
@@ -60,5 +45,9 @@ export const AutoReactionsPlugin = zeppelinGuildPlugin<AutoReactionsPluginType>(
     state.savedMessages = GuildSavedMessages.getGuildInstance(guild.id);
     state.autoReactions = GuildAutoReactions.getGuildInstance(guild.id);
     state.cache = new Map();
+  },
+
+  beforeStart(pluginData) {
+    pluginData.state.common = pluginData.getPlugin(CommonPlugin);
   },
 });

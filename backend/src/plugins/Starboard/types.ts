@@ -1,44 +1,35 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand } from "knub";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { GuildStarboardMessages } from "../../data/GuildStarboardMessages";
-import { GuildStarboardReactions } from "../../data/GuildStarboardReactions";
-import { tDeepPartial, tNullable } from "../../utils";
+import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand, pluginUtils } from "vety";
+import { z } from "zod";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { GuildStarboardMessages } from "../../data/GuildStarboardMessages.js";
+import { GuildStarboardReactions } from "../../data/GuildStarboardReactions.js";
+import { zBoundedRecord, zSnowflake } from "../../utils.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
 
-const StarboardOpts = t.type({
-  channel_id: t.string,
-  stars_required: t.number,
-  star_emoji: tNullable(t.array(t.string)),
-  allow_selfstars: tNullable(t.boolean),
-  copy_full_embed: tNullable(t.boolean),
-  enabled: tNullable(t.boolean),
-  show_star_count: t.boolean,
-  color: tNullable(t.number),
+const zStarboardOpts = z.strictObject({
+  channel_id: zSnowflake,
+  stars_required: z.number(),
+  star_emoji: z.array(z.string()).default(["⭐"]),
+  allow_selfstars: z.boolean().default(false),
+  copy_full_embed: z.boolean().default(false),
+  enabled: z.boolean().default(true),
+  show_star_count: z.boolean().default(true),
+  color: z.number().nullable().default(null),
 });
-export type TStarboardOpts = t.TypeOf<typeof StarboardOpts>;
+export type TStarboardOpts = z.infer<typeof zStarboardOpts>;
 
-export const ConfigSchema = t.type({
-  boards: t.record(t.string, StarboardOpts),
-  can_migrate: t.boolean,
+export const zStarboardConfig = z.strictObject({
+  boards: zBoundedRecord(z.record(z.string(), zStarboardOpts), 0, 100).default({}),
+  can_migrate: z.boolean().default(false),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
-
-export const PartialConfigSchema = tDeepPartial(ConfigSchema);
-
-export const defaultStarboardOpts: Partial<TStarboardOpts> = {
-  star_emoji: ["⭐"],
-  enabled: true,
-  show_star_count: true,
-  color: null,
-};
 
 export interface StarboardPluginType extends BasePluginType {
-  config: TConfigSchema;
-
+  configSchema: typeof zStarboardConfig;
   state: {
     savedMessages: GuildSavedMessages;
     starboardMessages: GuildStarboardMessages;
     starboardReactions: GuildStarboardReactions;
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
 
     onMessageDeleteFn;
   };

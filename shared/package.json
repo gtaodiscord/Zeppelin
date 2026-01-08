@@ -1,8 +1,12 @@
 {
-  "name": "@zeppelin/shared",
+  "name": "@zeppelinbot/shared",
   "version": "0.0.1",
   "description": "",
   "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./dist/*"
+  },
   "scripts": {
     "test": "ava"
   },

@@ -1,17 +1,18 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand } from "knub";
-import { Queue } from "../../Queue";
-import { GuildReactionRoles } from "../../data/GuildReactionRoles";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { tNullable } from "../../utils";
+import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand, pluginUtils } from "vety";
+import { z } from "zod";
+import { Queue } from "../../Queue.js";
+import { GuildReactionRoles } from "../../data/GuildReactionRoles.js";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
 
-export const ConfigSchema = t.type({
-  auto_refresh_interval: t.number,
-  remove_user_reactions: t.boolean,
-  can_manage: t.boolean,
-  button_groups: tNullable(t.unknown),
+const MIN_AUTO_REFRESH = 1000 * 60 * 15; // 15min minimum, let's not abuse the API
+
+export const zReactionRolesConfig = z.strictObject({
+  auto_refresh_interval: z.number().min(MIN_AUTO_REFRESH).default(MIN_AUTO_REFRESH),
+  remove_user_reactions: z.boolean().default(true),
+  can_manage: z.boolean().default(false),
+  button_groups: z.null().default(null),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export type RoleChangeMode = "+" | "-";
 
@@ -24,12 +25,11 @@ export type PendingMemberRoleChanges = {
   }>;
 };
 
-const ReactionRolePair = t.union([t.tuple([t.string, t.string, t.string]), t.tuple([t.string, t.string])]);
-export type TReactionRolePair = t.TypeOf<typeof ReactionRolePair>;
-type ReactionRolePair = [string, string, string?];
+const zReactionRolePair = z.union([z.tuple([z.string(), z.string(), z.string()]), z.tuple([z.string(), z.string()])]);
+export type TReactionRolePair = z.infer<typeof zReactionRolePair>;
 
 export interface ReactionRolesPluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zReactionRolesConfig;
   state: {
     reactionRoles: GuildReactionRoles;
     savedMessages: GuildSavedMessages;
@@ -40,6 +40,8 @@ export interface ReactionRolesPluginType extends BasePluginType {
     pendingRefreshes: Set<string>;
 
     autoRefreshTimeout: NodeJS.Timeout;
+
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
   };
 }
 

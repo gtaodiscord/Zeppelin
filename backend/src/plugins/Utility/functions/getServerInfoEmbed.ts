@@ -1,5 +1,5 @@
 import { APIEmbed, ChannelType, GuildPremiumTier, Snowflake } from "discord.js";
-import { GuildPluginData } from "knub";
+import { GuildPluginData } from "vety";
 import {
   EmbedWith,
   MINUTES,
@@ -11,10 +11,10 @@ import {
   resolveInvite,
   resolveUser,
   trimLines,
-} from "../../../utils";
-import { idToTimestamp } from "../../../utils/idToTimestamp";
-import { UtilityPluginType } from "../types";
-import { getGuildPreview } from "./getGuildPreview";
+} from "../../../utils.js";
+import { idToTimestamp } from "../../../utils/idToTimestamp.js";
+import { UtilityPluginType } from "../types.js";
+import { getGuildPreview } from "./getGuildPreview.js";
 
 const prettifyFeature = (feature: string): string =>
   `\`${feature
@@ -25,7 +25,6 @@ const prettifyFeature = (feature: string): string =>
 export async function getServerInfoEmbed(
   pluginData: GuildPluginData<UtilityPluginType>,
   serverId: string,
-  requestMemberId?: string,
 ): Promise<APIEmbed | null> {
   const thisServer = serverId === pluginData.guild.id ? pluginData.guild : null;
   const [restGuild, guildPreview] = await Promise.all([
@@ -60,7 +59,7 @@ export async function getServerInfoEmbed(
   basicInformation.push(`Created: **<t:${Math.round(createdAtTs / 1000)}:R>**`);
 
   if (thisServer) {
-    const owner = await resolveUser(pluginData.client, thisServer.ownerId);
+    const owner = await resolveUser(pluginData.client, thisServer.ownerId, "Utility:getServerInfoEmbed");
     const ownerName = renderUsername(owner.username, owner.discriminator);
 
     basicInformation.push(`Owner: **${ownerName}** (\`${thisServer.ownerId}\`)`);
@@ -149,11 +148,15 @@ export async function getServerInfoEmbed(
     const textChannels = thisServer.channels.cache.filter((channel) => channel.type === ChannelType.GuildText);
     const voiceChannels = thisServer.channels.cache.filter((channel) => channel.type === ChannelType.GuildVoice);
     const forumChannels = thisServer.channels.cache.filter((channel) => channel.type === ChannelType.GuildForum);
+    const mediaChannels = thisServer.channels.cache.filter((channel) => channel.type === ChannelType.GuildMedia);
     const threadChannelsText = thisServer.channels.cache.filter(
       (channel) => channel.isThread() && channel.parent?.type !== ChannelType.GuildForum,
     );
     const threadChannelsForums = thisServer.channels.cache.filter(
       (channel) => channel.isThread() && channel.parent?.type === ChannelType.GuildForum,
+    );
+    const threadChannelsMedia = thisServer.channels.cache.filter(
+      (channel) => channel.isThread() && channel.parent?.type === ChannelType.GuildMedia,
     );
     const announcementChannels = thisServer.channels.cache.filter(
       (channel) => channel.type === ChannelType.GuildAnnouncement,
@@ -169,6 +172,7 @@ export async function getServerInfoEmbed(
           Categories: **${categories.size}**
           Text: **${textChannels.size}** (**${threadChannelsText.size} threads**)
           Forums: **${forumChannels.size}** (**${threadChannelsForums.size} threads**)
+          Media: **${mediaChannels.size}** (**${threadChannelsMedia.size} threads**)
           Announcement: **${announcementChannels.size}**
           Voice: **${voiceChannels.size}**
           Stage: **${stageChannels.size}**
@@ -205,9 +209,14 @@ export async function getServerInfoEmbed(
         [GuildPremiumTier.Tier3]: 60,
       }[restGuild.premiumTier] ?? 0;
 
+    const availableEmojis = restGuild.emojis.cache.filter((e) => e.available);
     otherStats.push(
-      `Emojis: **${restGuild.emojis.cache.size}** / ${maxEmojis * 2}${
+      `Emojis: **${availableEmojis.size}** / ${maxEmojis * 2}${
         roleLockedEmojis ? ` (__${roleLockedEmojis} role-locked__)` : ""
+      }${
+        availableEmojis.size < restGuild.emojis.cache.size
+          ? ` (__+${restGuild.emojis.cache.size - availableEmojis.size} unavailable__)`
+          : ""
       }`,
     );
     otherStats.push(`Stickers: **${restGuild.stickers.cache.size}** / ${maxStickers}`);

@@ -1,15 +1,15 @@
 import express, { Request, Response } from "express";
 import https from "https";
-import pick from "lodash.pick";
+import { pick } from "lodash-es";
 import passport from "passport";
 import { Strategy as CustomStrategy } from "passport-custom";
 import OAuth2Strategy from "passport-oauth2";
-import { ApiLogins } from "../data/ApiLogins";
-import { ApiPermissionAssignments } from "../data/ApiPermissionAssignments";
-import { ApiUserInfo } from "../data/ApiUserInfo";
-import { ApiUserInfoData } from "../data/entities/ApiUserInfo";
-import { env } from "../env";
-import { ok } from "./responses";
+import { ApiLogins } from "../data/ApiLogins.js";
+import { ApiPermissionAssignments } from "../data/ApiPermissionAssignments.js";
+import { ApiUserInfo } from "../data/ApiUserInfo.js";
+import { ApiUserInfoData } from "../data/entities/ApiUserInfo.js";
+import { env } from "../env.js";
+import { ok } from "./responses.js";
 
 interface IPassportApiUser {
   apiKey: string;
@@ -51,8 +51,8 @@ function simpleDiscordAPIRequest(bearerToken, path): Promise<any> {
   });
 }
 
-export function initAuth(app: express.Express) {
-  app.use(passport.initialize());
+export function initAuth(router: express.Router) {
+  router.use(passport.initialize());
 
   passport.serializeUser((user, done) => done(null, user));
   passport.deserializeUser((user, done) => done(null, user as IPassportApiUser));
@@ -110,8 +110,8 @@ export function initAuth(app: express.Express) {
     ),
   );
 
-  app.get("/auth/login", passport.authenticate("oauth2"));
-  app.get(
+  router.get("/auth/login", passport.authenticate("oauth2"));
+  router.get(
     "/auth/oauth-callback",
     passport.authenticate("oauth2", { failureRedirect: "/", session: false }),
     (req: Request, res: Response) => {
@@ -122,7 +122,7 @@ export function initAuth(app: express.Express) {
       }
     },
   );
-  app.post("/auth/validate-key", async (req: Request, res: Response) => {
+  router.post("/auth/validate-key", async (req: Request, res: Response) => {
     const key = req.body.key;
     if (!key) {
       return res.status(400).json({ error: "No key supplied" });
@@ -135,21 +135,21 @@ export function initAuth(app: express.Express) {
 
     res.json({ valid: true, userId });
   });
-  app.post("/auth/logout", ...apiTokenAuthHandlers(), async (req: Request, res: Response) => {
+  router.post("/auth/logout", ...apiTokenAuthHandlers(), async (req: Request, res: Response) => {
     await apiLogins.expireApiKey(req.user!.apiKey);
     return ok(res);
   });
 
   // API route to refresh the given API token's expiry time
   // The actual refreshing happens in the api-token passport strategy above, so we just return 200 OK here
-  app.post("/auth/refresh", ...apiTokenAuthHandlers(), (req, res) => {
+  router.post("/auth/refresh", ...apiTokenAuthHandlers(), (req, res) => {
     return ok(res);
   });
 }
 
 export function apiTokenAuthHandlers() {
   return [
-    passport.authenticate("api-token", { failWithError: true }),
+    passport.authenticate("api-token", { failWithError: true, session: false }),
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (err, req: Request, res: Response, next) => {
       return res.status(401).json({ error: err.message });

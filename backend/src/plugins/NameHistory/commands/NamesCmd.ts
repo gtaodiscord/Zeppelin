@@ -1,12 +1,11 @@
 import { Snowflake } from "discord.js";
-import { createChunkedMessage, disableCodeBlocks } from "knub/helpers";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { MAX_NICKNAME_ENTRIES_PER_USER } from "../../../data/GuildNicknameHistory";
-import { MAX_USERNAME_ENTRIES_PER_USER } from "../../../data/UsernameHistory";
-import { NICKNAME_RETENTION_PERIOD } from "../../../data/cleanup/nicknames";
-import { sendErrorMessage } from "../../../pluginUtils";
-import { DAYS, renderUserUsername } from "../../../utils";
-import { nameHistoryCmd } from "../types";
+import { createChunkedMessage, disableCodeBlocks } from "vety/helpers";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { MAX_NICKNAME_ENTRIES_PER_USER } from "../../../data/GuildNicknameHistory.js";
+import { MAX_USERNAME_ENTRIES_PER_USER } from "../../../data/UsernameHistory.js";
+import { NICKNAME_RETENTION_PERIOD } from "../../../data/cleanup/nicknames.js";
+import { DAYS, renderUsername } from "../../../utils.js";
+import { nameHistoryCmd } from "../types.js";
 
 export const NamesCmd = nameHistoryCmd({
   trigger: "names",
@@ -21,7 +20,7 @@ export const NamesCmd = nameHistoryCmd({
     const usernames = await pluginData.state.usernameHistory.getByUserId(args.userId);
 
     if (nicknames.length === 0 && usernames.length === 0) {
-      sendErrorMessage(pluginData, msg.channel, "No name history found");
+      void pluginData.state.common.sendErrorMessage(msg, "No name history found");
       return;
     }
 
@@ -31,7 +30,7 @@ export const NamesCmd = nameHistoryCmd({
     const usernameRows = usernames.map((r) => `\`[${r.timestamp}]\` **${disableCodeBlocks(r.username)}**`);
 
     const user = await pluginData.client.users.fetch(args.userId as Snowflake).catch(() => null);
-    const currentUsername = user ? renderUserUsername(user) : args.userId;
+    const currentUsername = user ? renderUsername(user) : args.userId;
 
     const nicknameDays = Math.round(NICKNAME_RETENTION_PERIOD / DAYS);
     const usernameDays = Math.round(NICKNAME_RETENTION_PERIOD / DAYS);

@@ -2,10 +2,9 @@ import photon from "@silvia-odwyer/photon-node";
 import { AttachmentBuilder } from "discord.js";
 import fs from "fs";
 import twemoji from "twemoji";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { sendErrorMessage } from "../../../pluginUtils";
-import { downloadFile, isEmoji, SECONDS } from "../../../utils";
-import { utilityCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { downloadFile, isEmoji, SECONDS } from "../../../utils.js";
+import { utilityCmd } from "../types.js";
 
 const fsp = fs.promises;
 
@@ -51,7 +50,7 @@ export const JumboCmd = utilityCmd({
     let file: AttachmentBuilder | undefined;
 
     if (!isEmoji(args.emoji)) {
-      sendErrorMessage(pluginData, msg.channel, "Invalid emoji");
+      void pluginData.state.common.sendErrorMessage(msg, "Invalid emoji");
       return;
     }
 
@@ -87,7 +86,7 @@ export const JumboCmd = utilityCmd({
         }
       }
       if (!image) {
-        sendErrorMessage(pluginData, msg.channel, "Error occurred while jumboing default emoji");
+        void pluginData.state.common.sendErrorMessage(msg, "Error occurred while jumboing default emoji");
         return;
       }
 

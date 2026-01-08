@@ -1,19 +1,20 @@
 import { PermissionFlagsBits, Snowflake } from "discord.js";
-import * as t from "io-ts";
-import { nonNullish, unique } from "../../../utils";
-import { canAssignRole } from "../../../utils/canAssignRole";
-import { getMissingPermissions } from "../../../utils/getMissingPermissions";
-import { missingPermissionError } from "../../../utils/missingPermissionError";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { RoleManagerPlugin } from "../../RoleManager/RoleManagerPlugin";
-import { ignoreRoleChange } from "../functions/ignoredRoleChanges";
-import { automodAction } from "../helpers";
+import { z } from "zod";
+import { nonNullish, unique, zSnowflake } from "../../../utils.js";
+import { canAssignRole } from "../../../utils/canAssignRole.js";
+import { getMissingPermissions } from "../../../utils/getMissingPermissions.js";
+import { missingPermissionError } from "../../../utils/missingPermissionError.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { RoleManagerPlugin } from "../../RoleManager/RoleManagerPlugin.js";
+import { ignoreRoleChange } from "../functions/ignoredRoleChanges.js";
+import { automodAction } from "../helpers.js";
 
 const p = PermissionFlagsBits;
 
+const configSchema = z.array(zSnowflake);
+
 export const AddRolesAction = automodAction({
-  configType: t.array(t.string),
-  defaultConfig: [],
+  configSchema,
 
   async apply({ pluginData, contexts, actionConfig, ruleName }) {
     const members = unique(contexts.map((c) => c.member).filter(nonNullish));

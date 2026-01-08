@@ -1,13 +1,14 @@
 import moment from "moment-timezone";
-import { getRepository, Repository } from "typeorm";
-import { DAYS, DBDateFormat } from "../utils";
-import { BaseRepository } from "./BaseRepository";
-import { Mute } from "./entities/Mute";
-import { MuteTypes } from "./MuteTypes";
+import { Repository } from "typeorm";
+import { DAYS, DBDateFormat } from "../utils.js";
+import { BaseRepository } from "./BaseRepository.js";
+import { MuteTypes } from "./MuteTypes.js";
+import { dataSource } from "./dataSource.js";
+import { Mute } from "./entities/Mute.js";
 
 const OLD_EXPIRED_MUTE_THRESHOLD = 7 * DAYS;
 
-export const MAX_TIMEOUT_DURATION = 28 * DAYS;
+export const MAX_TIMEOUT_DURATION = 27 * DAYS;
 // When a timeout is under this duration but the mute expires later, the timeout will be reset to max duration
 export const TIMEOUT_RENEWAL_THRESHOLD = 21 * DAYS;
 
@@ -16,10 +17,10 @@ export class Mutes extends BaseRepository {
 
   constructor() {
     super();
-    this.mutes = getRepository(Mute);
+    this.mutes = dataSource.getRepository(Mute);
   }
 
-  findMute(guildId: string, userId: string): Promise<Mute | undefined> {
+  findMute(guildId: string, userId: string): Promise<Mute | null> {
     return this.mutes.findOne({
       where: {
         guild_id: guildId,

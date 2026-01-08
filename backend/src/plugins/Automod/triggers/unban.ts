@@ -1,12 +1,13 @@
-import * as t from "io-ts";
-import { automodTrigger } from "../helpers";
+import { z } from "zod";
+import { automodTrigger } from "../helpers.js";
 
 // tslint:disable-next-line:no-empty-interface
 interface UnbanTriggerResultType {}
 
+const configSchema = z.strictObject({});
+
 export const UnbanTrigger = automodTrigger<UnbanTriggerResultType>()({
-  configType: t.type({}),
-  defaultConfig: {},
+  configSchema,
 
   async match({ context }) {
     if (context.modAction?.type !== "unban") {

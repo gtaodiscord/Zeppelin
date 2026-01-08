@@ -1,6 +1,6 @@
 import { TextChannel } from "discord.js";
-import { activeReloads } from "../guildReloads";
-import { utilityCmd } from "../types";
+import { activeReloads } from "../guildReloads.js";
+import { utilityCmd } from "../types.js";
 
 export const ReloadGuildCmd = utilityCmd({
   trigger: "reload_guild",
@@ -12,6 +12,6 @@ export const ReloadGuildCmd = utilityCmd({
     activeReloads.set(pluginData.guild.id, msg.channel as TextChannel);
 
     msg.channel.send("Reloading...");
-    pluginData.getKnubInstance().reloadGuild(pluginData.guild.id);
+    pluginData.getVetyInstance().reloadGuild(pluginData.guild.id);
   },
 });

@@ -1,12 +1,13 @@
 import { GuildMember } from "discord.js";
-import { GuildPluginData } from "knub";
+import { GuildPluginData } from "vety";
 import { parseArguments } from "knub-command-manager";
-import { TemplateParseError } from "../../../templateFormatter";
-import { StrictMessageContent, validateAndParseMessageContent } from "../../../utils";
-import { memberToTemplateSafeMember, userToTemplateSafeUser } from "../../../utils/templateSafeObjects";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { TTag, TagsPluginType } from "../types";
-import { renderTagBody } from "./renderTagBody";
+import { logger } from "../../../logger.js";
+import { TemplateParseError } from "../../../templateFormatter.js";
+import { StrictMessageContent, validateAndParseMessageContent } from "../../../utils.js";
+import { memberToTemplateSafeMember, userToTemplateSafeUser } from "../../../utils/templateSafeObjects.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { TTag, TagsPluginType } from "../types.js";
+import { renderTagBody } from "./renderTagBody.js";
 
 export async function renderTagFromString(
   pluginData: GuildPluginData<TagsPluginType>,
@@ -34,14 +35,16 @@ export async function renderTagFromString(
 
     return validateAndParseMessageContent(rendered);
   } catch (e) {
-    if (e instanceof TemplateParseError) {
-      const logs = pluginData.getPlugin(LogsPlugin);
-      logs.logBotAlert({
-        body: `Failed to render tag \`${prefix}${tagName}\`: ${e.message}`,
-      });
-      return null;
+    const logs = pluginData.getPlugin(LogsPlugin);
+    const errorMessage = e instanceof TemplateParseError ? e.message : "Internal error";
+    logs.logBotAlert({
+      body: `Failed to render tag \`${prefix}${tagName}\`: ${errorMessage}`,
+    });
+
+    if (!(e instanceof TemplateParseError)) {
+      logger.warn(`Internal error rendering tag ${tagName} in ${pluginData.guild.id}: ${e}`);
     }
 
-    throw e;
+    return null;
   }
 }

@@ -1,71 +1,25 @@
-import { GuildRoleButtons } from "../../data/GuildRoleButtons";
-import { parseIoTsSchema, StrictValidationError } from "../../validatorUtils";
-import { LogsPlugin } from "../Logs/LogsPlugin";
-import { RoleManagerPlugin } from "../RoleManager/RoleManagerPlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { resetButtonsCmd } from "./commands/resetButtons";
-import { onButtonInteraction } from "./events/buttonInteraction";
-import { applyAllRoleButtons } from "./functions/applyAllRoleButtons";
-import { createButtonComponents } from "./functions/createButtonComponents";
-import { TooManyComponentsError } from "./functions/TooManyComponentsError";
-import { pluginInfo } from "./info";
-import { ConfigSchema, RoleButtonsPluginType } from "./types";
+import { guildPlugin } from "vety";
+import { GuildRoleButtons } from "../../data/GuildRoleButtons.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { LogsPlugin } from "../Logs/LogsPlugin.js";
+import { RoleManagerPlugin } from "../RoleManager/RoleManagerPlugin.js";
+import { resetButtonsCmd } from "./commands/resetButtons.js";
+import { onButtonInteraction } from "./events/buttonInteraction.js";
+import { applyAllRoleButtons } from "./functions/applyAllRoleButtons.js";
+import { RoleButtonsPluginType, zRoleButtonsConfig } from "./types.js";
 
-export const RoleButtonsPlugin = zeppelinGuildPlugin<RoleButtonsPluginType>()({
+export const RoleButtonsPlugin = guildPlugin<RoleButtonsPluginType>()({
   name: "role_buttons",
-  info: pluginInfo,
-  showInDocs: true,
 
-  defaultOptions: {
-    config: {
-      buttons: {},
-      can_reset: false,
-    },
-    overrides: [
-      {
-        level: ">=100",
-        config: {
-          can_reset: true,
-        },
+  configSchema: zRoleButtonsConfig,
+  defaultOverrides: [
+    {
+      level: ">=100",
+      config: {
+        can_reset: true,
       },
-    ],
-  },
-
-  configParser(input) {
-    // Auto-fill "name" property for buttons based on the object key
-    const seenMessages = new Set();
-    for (const [name, buttonsConfig] of Object.entries<any>((input as any).buttons ?? {})) {
-      if (name.length > 16) {
-        throw new StrictValidationError(["Name for role buttons can be at most 16 characters long"]);
-      }
-
-      if (buttonsConfig) {
-        buttonsConfig.name = name;
-
-        if (buttonsConfig.message) {
-          if ("message_id" in buttonsConfig.message) {
-            if (seenMessages.has(buttonsConfig.message.message_id)) {
-              throw new StrictValidationError(["Can't target the same message with two sets of role buttons"]);
-            }
-            seenMessages.add(buttonsConfig.message.message_id);
-          }
-        }
-
-        if (buttonsConfig.options) {
-          try {
-            createButtonComponents(buttonsConfig);
-          } catch (err) {
-            if (err instanceof TooManyComponentsError) {
-              throw new StrictValidationError(["Too many options; can only have max 5 buttons per row on max 5 rows."]);
-            }
-            throw new StrictValidationError(["Error validating options"]);
-          }
-        }
-      }
-    }
-
-    return parseIoTsSchema(ConfigSchema, input);
-  },
+    },
+  ],
 
   dependencies: () => [LogsPlugin, RoleManagerPlugin],
 
@@ -75,6 +29,10 @@ export const RoleButtonsPlugin = zeppelinGuildPlugin<RoleButtonsPluginType>()({
 
   beforeLoad(pluginData) {
     pluginData.state.roleButtons = GuildRoleButtons.getGuildInstance(pluginData.guild.id);
+  },
+
+  beforeStart(pluginData) {
+    pluginData.state.common = pluginData.getPlugin(CommonPlugin);
   },
 
   async afterLoad(pluginData) {

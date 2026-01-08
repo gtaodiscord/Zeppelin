@@ -1,27 +1,22 @@
-import { PluginOptions } from "knub";
-import { GuildMemberTimezones } from "../../data/GuildMemberTimezones";
-import { makeIoTsConfigParser, mapToPublicFn } from "../../pluginUtils";
-import { trimPluginDescription } from "../../utils";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { ResetTimezoneCmd } from "./commands/ResetTimezoneCmd";
-import { SetTimezoneCmd } from "./commands/SetTimezoneCmd";
-import { ViewTimezoneCmd } from "./commands/ViewTimezoneCmd";
-import { defaultDateFormats } from "./defaultDateFormats";
-import { getDateFormat } from "./functions/getDateFormat";
-import { getGuildTz } from "./functions/getGuildTz";
-import { getMemberTz } from "./functions/getMemberTz";
-import { inGuildTz } from "./functions/inGuildTz";
-import { inMemberTz } from "./functions/inMemberTz";
-import { ConfigSchema, TimeAndDatePluginType } from "./types";
+import { guildPlugin } from "vety";
+import { GuildMemberTimezones } from "../../data/GuildMemberTimezones.js";
+import { makePublicFn } from "../../pluginUtils.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { ResetTimezoneCmd } from "./commands/ResetTimezoneCmd.js";
+import { SetTimezoneCmd } from "./commands/SetTimezoneCmd.js";
+import { ViewTimezoneCmd } from "./commands/ViewTimezoneCmd.js";
+import { getDateFormat } from "./functions/getDateFormat.js";
+import { getGuildTz } from "./functions/getGuildTz.js";
+import { getMemberTz } from "./functions/getMemberTz.js";
+import { inGuildTz } from "./functions/inGuildTz.js";
+import { inMemberTz } from "./functions/inMemberTz.js";
+import { TimeAndDatePluginType, zTimeAndDateConfig } from "./types.js";
 
-const defaultOptions: PluginOptions<TimeAndDatePluginType> = {
-  config: {
-    timezone: "Etc/UTC",
-    can_set_timezone: false,
-    date_formats: defaultDateFormats,
-  },
+export const TimeAndDatePlugin = guildPlugin<TimeAndDatePluginType>()({
+  name: "time_and_date",
 
-  overrides: [
+  configSchema: zTimeAndDateConfig,
+  defaultOverrides: [
     {
       level: ">=50",
       config: {
@@ -29,21 +24,6 @@ const defaultOptions: PluginOptions<TimeAndDatePluginType> = {
       },
     },
   ],
-};
-
-export const TimeAndDatePlugin = zeppelinGuildPlugin<TimeAndDatePluginType>()({
-  name: "time_and_date",
-  showInDocs: true,
-  info: {
-    prettyName: "Time and date",
-    description: trimPluginDescription(`
-      Allows controlling the displayed time/date formats and timezones
-    `),
-    configSchema: ConfigSchema,
-  },
-
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
 
   // prettier-ignore
   messageCommands: [
@@ -52,17 +32,23 @@ export const TimeAndDatePlugin = zeppelinGuildPlugin<TimeAndDatePluginType>()({
     ViewTimezoneCmd,
   ],
 
-  public: {
-    getGuildTz: mapToPublicFn(getGuildTz),
-    inGuildTz: mapToPublicFn(inGuildTz),
-    getMemberTz: mapToPublicFn(getMemberTz),
-    inMemberTz: mapToPublicFn(inMemberTz),
-    getDateFormat: mapToPublicFn(getDateFormat),
+  public(pluginData) {
+    return {
+      getGuildTz: makePublicFn(pluginData, getGuildTz),
+      inGuildTz: makePublicFn(pluginData, inGuildTz),
+      getMemberTz: makePublicFn(pluginData, getMemberTz),
+      inMemberTz: makePublicFn(pluginData, inMemberTz),
+      getDateFormat: makePublicFn(pluginData, getDateFormat),
+    };
   },
 
   beforeLoad(pluginData) {
     const { state, guild } = pluginData;
 
     state.memberTimezones = GuildMemberTimezones.getGuildInstance(guild.id);
+  },
+
+  beforeStart(pluginData) {
+    pluginData.state.common = pluginData.getPlugin(CommonPlugin);
   },
 });

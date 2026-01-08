@@ -1,13 +1,14 @@
-import { getRepository, Repository } from "typeorm";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { PingableRole } from "./entities/PingableRole";
+import { Repository } from "typeorm";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { dataSource } from "./dataSource.js";
+import { PingableRole } from "./entities/PingableRole.js";
 
 export class GuildPingableRoles extends BaseGuildRepository {
   private pingableRoles: Repository<PingableRole>;
 
   constructor(guildId) {
     super(guildId);
-    this.pingableRoles = getRepository(PingableRole);
+    this.pingableRoles = dataSource.getRepository(PingableRole);
   }
 
   async all(): Promise<PingableRole[]> {
@@ -27,7 +28,7 @@ export class GuildPingableRoles extends BaseGuildRepository {
     });
   }
 
-  async getByChannelAndRoleId(channelId: string, roleId: string): Promise<PingableRole | undefined> {
+  async getByChannelAndRoleId(channelId: string, roleId: string): Promise<PingableRole | null> {
     return this.pingableRoles.findOne({
       where: {
         guild_id: this.guildId,

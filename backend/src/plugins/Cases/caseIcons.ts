@@ -1,5 +1,7 @@
-import { CaseTypes } from "../../data/CaseTypes";
+import { CaseTypes } from "../../data/CaseTypes.js";
 
+// These emoji icons are hosted on the Hangar server
+// If you'd like your self-hosted instance to use these icons, check #add-your-bot on that server
 export const caseIcons: Record<CaseTypes, string> = {
   [CaseTypes.Ban]: "<:caseban:892052511698075689>",
   [CaseTypes.Unban]: "<:caseunban:892052628345856080>",

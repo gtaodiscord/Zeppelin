@@ -1,12 +1,11 @@
 import { GuildTextBasedChannel, Snowflake } from "discord.js";
-import * as t from "io-ts";
-import { LogType } from "../../../data/LogType";
-import { noop } from "../../../utils";
-import { automodAction } from "../helpers";
+import { z } from "zod";
+import { LogType } from "../../../data/LogType.js";
+import { noop } from "../../../utils.js";
+import { automodAction } from "../helpers.js";
 
 export const CleanAction = automodAction({
-  configType: t.boolean,
-  defaultConfig: false,
+  configSchema: z.boolean().default(false),
 
   async apply({ pluginData, contexts, ruleName }) {
     const messageIdsToDeleteByChannelId: Map<string, string[]> = new Map();

@@ -1,23 +1,19 @@
-import * as t from "io-ts";
-import { asyncMap, nonNullish, resolveMember, tNullable, unique } from "../../../utils";
-import { CaseArgs } from "../../Cases/types";
-import { ModActionsPlugin } from "../../ModActions/ModActionsPlugin";
-import { resolveActionContactMethods } from "../functions/resolveActionContactMethods";
-import { automodAction } from "../helpers";
+import { z } from "zod";
+import { asyncMap, nonNullish, resolveMember, unique, zBoundedCharacters, zSnowflake } from "../../../utils.js";
+import { CaseArgs } from "../../Cases/types.js";
+import { ModActionsPlugin } from "../../ModActions/ModActionsPlugin.js";
+import { zNotify } from "../constants.js";
+import { resolveActionContactMethods } from "../functions/resolveActionContactMethods.js";
+import { automodAction } from "../helpers.js";
 
 export const WarnAction = automodAction({
-  configType: t.type({
-    reason: tNullable(t.string),
-    notify: tNullable(t.string),
-    notifyChannel: tNullable(t.string),
-    postInCaseLog: tNullable(t.boolean),
-    hide_case: tNullable(t.boolean),
+  configSchema: z.strictObject({
+    reason: zBoundedCharacters(0, 4000).nullable().default(null),
+    notify: zNotify.nullable().default(null),
+    notifyChannel: zSnowflake.nullable().default(null),
+    postInCaseLog: z.boolean().nullable().default(null),
+    hide_case: z.boolean().nullable().default(false),
   }),
-
-  defaultConfig: {
-    notify: null, // Use defaults from ModActions
-    hide_case: false,
-  },
 
   async apply({ pluginData, contexts, actionConfig, matchResult }) {
     const reason = actionConfig.reason || "Warned automatically";
@@ -37,7 +33,7 @@ export const WarnAction = automodAction({
     const modActions = pluginData.getPlugin(ModActionsPlugin);
     for (const member of membersToWarn) {
       if (!member) continue;
-      await modActions.warnMember(member, reason, { contactMethods, caseArgs, isAutomodAction: true });
+      await modActions.warnMember(member, reason, reason, { contactMethods, caseArgs, isAutomodAction: true });
     }
   },
 });

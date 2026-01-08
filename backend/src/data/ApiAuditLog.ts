@@ -1,14 +1,15 @@
-import { getRepository, Repository } from "typeorm/index";
-import { AuditLogEventData, AuditLogEventType } from "./apiAuditLogTypes";
-import { BaseRepository } from "./BaseRepository";
-import { ApiAuditLogEntry } from "./entities/ApiAuditLogEntry";
+import { Repository } from "typeorm";
+import { BaseRepository } from "./BaseRepository.js";
+import { AuditLogEventData, AuditLogEventType } from "./apiAuditLogTypes.js";
+import { dataSource } from "./dataSource.js";
+import { ApiAuditLogEntry } from "./entities/ApiAuditLogEntry.js";
 
 export class ApiAuditLog extends BaseRepository {
   private auditLog: Repository<ApiAuditLogEntry<any>>;
 
   constructor() {
     super();
-    this.auditLog = getRepository(ApiAuditLogEntry);
+    this.auditLog = dataSource.getRepository(ApiAuditLogEntry);
   }
 
   addEntry<TEventType extends AuditLogEventType>(

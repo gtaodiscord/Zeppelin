@@ -1,11 +1,11 @@
 import { Snowflake } from "discord.js";
 import moment from "moment-timezone";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { isOwner, sendErrorMessage } from "../../../pluginUtils";
-import { SECONDS, confirm, noop, renderUsername } from "../../../utils";
-import { TimeAndDatePlugin } from "../../TimeAndDate/TimeAndDatePlugin";
-import { rehostAttachment } from "../rehostAttachment";
-import { channelArchiverCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { isOwner } from "../../../pluginUtils.js";
+import { SECONDS, confirm, noop, renderUsername } from "../../../utils.js";
+import { TimeAndDatePlugin } from "../../TimeAndDate/TimeAndDatePlugin.js";
+import { rehostAttachment } from "../rehostAttachment.js";
+import { channelArchiverCmd } from "../types.js";
 
 const MAX_ARCHIVED_MESSAGES = 5000;
 const MAX_MESSAGES_PER_FETCH = 100;
@@ -32,12 +32,12 @@ export const ArchiveChannelCmd = channelArchiverCmd({
 
   async run({ message: msg, args, pluginData }) {
     if (!args["attachment-channel"]) {
-      const confirmed = await confirm(msg.channel, msg.author.id, {
+      const confirmed = await confirm(msg, msg.author.id, {
         content:
           "No `-attachment-channel` specified. Continue? Attachments will not be available in the log if their message is deleted.",
       });
       if (!confirmed) {
-        sendErrorMessage(pluginData, msg.channel, "Canceled");
+        void pluginData.state.common.sendErrorMessage(msg, "Canceled");
         return;
       }
     }
@@ -68,10 +68,9 @@ export const ArchiveChannelCmd = channelArchiverCmd({
 
       for (const message of messages.values()) {
         const ts = moment.utc(message.createdTimestamp).format("YYYY-MM-DD HH:mm:ss");
-        let content = `[${ts}] [${message.author.id}] [${renderUsername(
-          message.author.username,
-          message.author.discriminator,
-        )}]: ${message.content || "<no text content>"}`;
+        let content = `[${ts}] [${message.author.id}] [${renderUsername(message.author)}]: ${
+          message.content || "<no text content>"
+        }`;
 
         if (message.attachments.size) {
           if (args["attachment-channel"]) {
@@ -82,9 +81,9 @@ export const ArchiveChannelCmd = channelArchiverCmd({
           }
         }
 
-        if (message.reactions && Object.keys(message.reactions).length > 0) {
+        if (message.reactions.cache.size > 0) {
           const reactionCounts: string[] = [];
-          for (const [emoji, info] of Object.entries(message.reactions)) {
+          for (const [emoji, info] of message.reactions.cache) {
             reactionCounts.push(`${info.count}x ${emoji}`);
           }
           content += `\n-- Reactions: ${reactionCounts.join(", ")}`;

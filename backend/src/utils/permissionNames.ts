@@ -1,5 +1,5 @@
 import type { PermissionFlagsBits } from "discord.js";
-import { EMPTY_CHAR } from "../utils";
+import { EMPTY_CHAR } from "../utils.js";
 
 export const PERMISSION_NAMES = {
   AddReactions: "Add Reactions",
@@ -48,4 +48,9 @@ export const PERMISSION_NAMES = {
   UseExternalSounds: "Use External Sounds",
   UseSoundboard: "Use Soundboard",
   ViewCreatorMonetizationAnalytics: "View Creator Monetization Analytics",
+  CreateGuildExpressions: "Create Guild Expressions",
+  CreateEvents: "Create Events",
+  SendPolls: "Send Polls",
+  UseExternalApps: "Use External Apps",
+  PinMessages: "Pin Messages",
 } as const satisfies Record<keyof typeof PermissionFlagsBits, string>;

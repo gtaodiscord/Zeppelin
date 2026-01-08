@@ -1,9 +1,9 @@
-import { GuildPluginData } from "knub";
-import { ERRORS, RecoverablePluginError } from "../../../RecoverablePluginError";
-import { UnknownUser, resolveUser } from "../../../utils";
-import { CaseNoteArgs, CasesPluginType } from "../types";
-import { postCaseToCaseLogChannel } from "./postToCaseLogChannel";
-import { resolveCaseId } from "./resolveCaseId";
+import { GuildPluginData } from "vety";
+import { ERRORS, RecoverablePluginError } from "../../../RecoverablePluginError.js";
+import { UnknownUser, renderUsername, resolveUser } from "../../../utils.js";
+import { CaseNoteArgs, CasesPluginType } from "../types.js";
+import { postCaseToCaseLogChannel } from "./postToCaseLogChannel.js";
+import { resolveCaseId } from "./resolveCaseId.js";
 
 export async function createCaseNote(pluginData: GuildPluginData<CasesPluginType>, args: CaseNoteArgs): Promise<void> {
   const theCase = await pluginData.state.cases.find(resolveCaseId(args.caseId));
@@ -11,12 +11,12 @@ export async function createCaseNote(pluginData: GuildPluginData<CasesPluginType
     throw new RecoverablePluginError(ERRORS.UNKNOWN_NOTE_CASE);
   }
 
-  const mod = await resolveUser(pluginData.client, args.modId);
+  const mod = await resolveUser(pluginData.client, args.modId, "Cases:createCaseNote");
   if (mod instanceof UnknownUser) {
     throw new RecoverablePluginError(ERRORS.INVALID_USER);
   }
 
-  const modName = mod.tag;
+  const modName = renderUsername(mod);
 
   let body = args.body;
 

@@ -1,10 +1,9 @@
 import { EmbedData, GuildTextBasedChannel, Snowflake } from "discord.js";
-import { GuildPluginData } from "knub";
-import cloneDeep from "lodash.clonedeep";
-import { SavedMessage } from "../../../data/entities/SavedMessage";
-import { resolveUser } from "../../../utils";
-import { logMessageEdit } from "../logFunctions/logMessageEdit";
-import { LogsPluginType } from "../types";
+import { GuildPluginData } from "vety";
+import { SavedMessage } from "../../../data/entities/SavedMessage.js";
+import { resolveUser } from "../../../utils.js";
+import { logMessageEdit } from "../logFunctions/logMessageEdit.js";
+import { LogsPluginType } from "../types.js";
 
 export async function onMessageUpdate(
   pluginData: GuildPluginData<LogsPluginType>,
@@ -15,12 +14,12 @@ export async function onMessageUpdate(
   let logUpdate = false;
 
   const oldEmbedsToCompare = ((oldSavedMessage.data.embeds || []) as EmbedData[])
-    .map((e) => cloneDeep(e))
-    .filter((e) => (e as EmbedData).type === "rich");
+    .map((e) => structuredClone(e))
+    .filter((e) => e.type === "rich");
 
   const newEmbedsToCompare = ((savedMessage.data.embeds || []) as EmbedData[])
-    .map((e) => cloneDeep(e))
-    .filter((e) => (e as EmbedData).type === "rich");
+    .map((e) => structuredClone(e))
+    .filter((e) => e.type === "rich");
 
   for (const embed of [...oldEmbedsToCompare, ...newEmbedsToCompare]) {
     if (embed.thumbnail) {
@@ -46,7 +45,7 @@ export async function onMessageUpdate(
     return;
   }
 
-  const user = await resolveUser(pluginData.client, savedMessage.user_id);
+  const user = await resolveUser(pluginData.client, savedMessage.user_id, "Logs:onMessageUpdate");
   const channel = pluginData.guild.channels.resolve(savedMessage.channel_id as Snowflake)! as GuildTextBasedChannel;
 
   logMessageEdit(pluginData, {

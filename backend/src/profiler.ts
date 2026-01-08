@@ -1,9 +1,9 @@
-import type { Knub } from "knub";
+import type { Vety } from "vety";
 
-type Profiler = Knub["profiler"];
+type Profiler = Vety["profiler"];
 let profiler: Profiler | null = null;
 
-export function getProfiler() {
+export function getProfiler(): Profiler | null {
   return profiler;
 }
 

@@ -1,23 +1,22 @@
-import * as t from "io-ts";
-import { BasePluginType, globalPluginEventListener, globalPluginMessageCommand } from "knub";
-import { AllowedGuilds } from "../../data/AllowedGuilds";
-import { ApiPermissionAssignments } from "../../data/ApiPermissionAssignments";
-import { Configs } from "../../data/Configs";
-import { GuildArchives } from "../../data/GuildArchives";
-import { tNullable } from "../../utils";
+import { BasePluginType, globalPluginEventListener, globalPluginMessageCommand } from "vety";
+import { z } from "zod";
+import { AllowedGuilds } from "../../data/AllowedGuilds.js";
+import { ApiPermissionAssignments } from "../../data/ApiPermissionAssignments.js";
+import { Configs } from "../../data/Configs.js";
+import { GuildArchives } from "../../data/GuildArchives.js";
+import { zBoundedCharacters } from "../../utils.js";
 
-export const ConfigSchema = t.type({
-  can_use: t.boolean,
-  can_eligible: t.boolean,
-  can_performance: t.boolean,
-  can_add_server_from_invite: t.boolean,
-  can_list_dashboard_perms: t.boolean,
-  update_cmd: tNullable(t.string),
+export const zBotControlConfig = z.strictObject({
+  can_use: z.boolean().default(false),
+  can_eligible: z.boolean().default(false),
+  can_performance: z.boolean().default(false),
+  can_add_server_from_invite: z.boolean().default(false),
+  can_list_dashboard_perms: z.boolean().default(false),
+  update_cmd: zBoundedCharacters(0, 2000).nullable().default(null),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface BotControlPluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zBotControlConfig;
   state: {
     archives: GuildArchives;
     allowedGuilds: AllowedGuilds;

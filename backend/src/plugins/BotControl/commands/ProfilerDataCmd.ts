@@ -1,9 +1,9 @@
 import moment from "moment-timezone";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { GuildArchives } from "../../../data/GuildArchives";
-import { getBaseUrl } from "../../../pluginUtils";
-import { sorter } from "../../../utils";
-import { botControlCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { GuildArchives } from "../../../data/GuildArchives.js";
+import { getBaseUrl } from "../../../pluginUtils.js";
+import { sorter } from "../../../utils.js";
+import { botControlCmd } from "../types.js";
 
 const sortProps = {
   totalTime: "TOTAL TIME",
@@ -28,7 +28,7 @@ export const ProfilerDataCmd = botControlCmd({
 
     const headerInfoItems = [`sorted by ${sortProps[sortProp]}`];
 
-    const profilerData = pluginData.getKnubInstance().profiler.getData();
+    const profilerData = pluginData.getVetyInstance().profiler.getData();
     let entries = Object.entries(profilerData);
     entries.sort(sorter((entry) => entry[1][sortProp], "DESC"));
 

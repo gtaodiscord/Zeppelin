@@ -1,46 +1,72 @@
 import { GuildMember, GuildTextBasedChannel, PartialGuildMember, ThreadChannel, User } from "discord.js";
-import * as t from "io-ts";
-import { BasePluginType, CooldownManager } from "knub";
-import { Queue } from "../../Queue";
-import { RegExpRunner } from "../../RegExpRunner";
-import { GuildAntiraidLevels } from "../../data/GuildAntiraidLevels";
-import { GuildArchives } from "../../data/GuildArchives";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { SavedMessage } from "../../data/entities/SavedMessage";
-import { tNullable } from "../../utils";
-import { CounterEvents } from "../Counters/types";
-import { ModActionType, ModActionsEvents } from "../ModActions/types";
-import { MutesEvents } from "../Mutes/types";
-import { AvailableActions } from "./actions/availableActions";
-import { RecentActionType } from "./constants";
-import { AvailableTriggers } from "./triggers/availableTriggers";
+import { BasePluginType, CooldownManager, pluginUtils } from "vety";
+import { z } from "zod";
+import { Queue } from "../../Queue.js";
+import { RegExpRunner } from "../../RegExpRunner.js";
+import { GuildAntiraidLevels } from "../../data/GuildAntiraidLevels.js";
+import { GuildArchives } from "../../data/GuildArchives.js";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { SavedMessage } from "../../data/entities/SavedMessage.js";
+import { entries, zBoundedRecord, zDelayString } from "../../utils.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { CounterEvents } from "../Counters/types.js";
+import { ModActionType, ModActionsEvents } from "../ModActions/types.js";
+import { MutesEvents } from "../Mutes/types.js";
+import { availableActions } from "./actions/availableActions.js";
+import { RecentActionType } from "./constants.js";
+import { availableTriggers } from "./triggers/availableTriggers.js";
 
 import Timeout = NodeJS.Timeout;
 
-export const Rule = t.type({
-  enabled: t.boolean,
-  name: t.string,
-  presets: tNullable(t.array(t.string)),
-  affects_bots: t.boolean,
-  affects_self: t.boolean,
-  triggers: t.array(t.partial(AvailableTriggers.props)),
-  actions: t.partial(AvailableActions.props),
-  cooldown: tNullable(t.string),
-  allow_further_rules: t.boolean,
-});
-export type TRule = t.TypeOf<typeof Rule>;
+export type ZTriggersMapHelper = {
+  [TriggerName in keyof typeof availableTriggers]: (typeof availableTriggers)[TriggerName]["configSchema"];
+};
+const zTriggersMap = z
+  .strictObject(
+    entries(availableTriggers).reduce((map, [triggerName, trigger]) => {
+      map[triggerName] = trigger.configSchema;
+      return map;
+    }, {} as ZTriggersMapHelper),
+  )
+  .partial();
 
-export const ConfigSchema = t.type({
-  rules: t.record(t.string, Rule),
-  antiraid_levels: t.array(t.string),
-  can_set_antiraid: t.boolean,
-  can_view_antiraid: t.boolean,
+type ZActionsMapHelper = {
+  [ActionName in keyof typeof availableActions]: (typeof availableActions)[ActionName]["configSchema"];
+};
+const zActionsMap = z
+  .strictObject(
+    entries(availableActions).reduce((map, [actionName, action]) => {
+      // @ts-expect-error TS can't infer this properly but it works fine thanks to our helper
+      map[actionName] = action.configSchema;
+      return map;
+    }, {} as ZActionsMapHelper),
+  )
+  .partial();
+
+const zRule = z.strictObject({
+  enabled: z.boolean().default(true),
+  pretty_name: z.string().optional(),
+  presets: z.array(z.string().max(100)).max(25).default([]),
+  affects_bots: z.boolean().default(false),
+  affects_self: z.boolean().default(false),
+  cooldown: zDelayString.nullable().default(null),
+  allow_further_rules: z.boolean().default(false),
+  triggers: z.array(zTriggersMap),
+  actions: zActionsMap,
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
+export type TRule = z.infer<typeof zRule>;
+
+export const zAutomodConfig = z.strictObject({
+  rules: zBoundedRecord(z.record(z.string().max(100), zRule), 0, 255).default({}),
+  antiraid_levels: z.array(z.string().max(100)).max(10).default(["low", "medium", "high"]),
+  can_set_antiraid: z.boolean().default(false),
+  can_view_antiraid: z.boolean().default(false),
+  can_debug_automod: z.boolean().default(false),
+});
 
 export interface AutomodPluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zAutomodConfig;
 
   customOverrideCriteria: {
     antiraid_level?: string;
@@ -98,6 +124,8 @@ export interface AutomodPluginType extends BasePluginType {
 
     modActionsListeners: Map<keyof ModActionsEvents, any>;
     mutesListeners: Map<keyof MutesEvents, any>;
+
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
   };
 }
 
@@ -130,6 +158,7 @@ export interface AutomodContext {
   };
   antiraid?: {
     level: string | null;
+    oldLevel?: string | null;
   };
   threadChange?: {
     created?: ThreadChannel;

@@ -1,9 +1,9 @@
 import { GuildTextBasedChannel, MessageCreateOptions, WebhookClient } from "discord.js";
-import { GuildPluginData } from "knub";
-import { isDiscordAPIError } from "../../../utils";
-import { InternalPosterPluginType } from "../types";
-import { getOrCreateWebhookClientForChannel } from "./getOrCreateWebhookClientForChannel";
-import { channelIsWebhookable } from "./getOrCreateWebhookForChannel";
+import { GuildPluginData } from "vety";
+import { isDiscordAPIError } from "../../../utils.js";
+import { InternalPosterPluginType } from "../types.js";
+import { getOrCreateWebhookClientForChannel } from "./getOrCreateWebhookClientForChannel.js";
+import { channelIsWebhookable } from "./getOrCreateWebhookForChannel.js";
 
 export type InternalPosterMessageResult = {
   id: string;
@@ -48,7 +48,7 @@ export async function sendMessage(
         ...content,
         ...(pluginData.client.user && {
           username: pluginData.client.user.username,
-          avatarURL: pluginData.client.user.avatarURL() || pluginData.client.user.defaultAvatarURL,
+          avatarURL: pluginData.client.user.displayAvatarURL(),
         }),
       })
       .then((apiMessage) => ({

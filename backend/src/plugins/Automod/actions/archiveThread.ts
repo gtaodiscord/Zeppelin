@@ -1,11 +1,12 @@
 import { AnyThreadChannel } from "discord.js";
-import * as t from "io-ts";
-import { noop } from "../../../utils";
-import { automodAction } from "../helpers";
+import { z } from "zod";
+import { noop } from "../../../utils.js";
+import { automodAction } from "../helpers.js";
+
+const configSchema = z.strictObject({});
 
 export const ArchiveThreadAction = automodAction({
-  configType: t.type({}),
-  defaultConfig: {},
+  configSchema,
 
   async apply({ pluginData, contexts }) {
     const threads = contexts

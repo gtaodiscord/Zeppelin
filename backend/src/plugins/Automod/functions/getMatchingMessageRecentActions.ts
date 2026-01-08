@@ -1,10 +1,10 @@
-import { GuildPluginData } from "knub";
+import { GuildPluginData } from "vety";
 import moment from "moment-timezone";
-import { SavedMessage } from "../../../data/entities/SavedMessage";
-import { startProfiling } from "../../../utils/easyProfiler";
-import { RecentActionType } from "../constants";
-import { AutomodPluginType } from "../types";
-import { getMatchingRecentActions } from "./getMatchingRecentActions";
+import { SavedMessage } from "../../../data/entities/SavedMessage.js";
+import { startProfiling } from "../../../utils/easyProfiler.js";
+import { RecentActionType } from "../constants.js";
+import { AutomodPluginType } from "../types.js";
+import { getMatchingRecentActions } from "./getMatchingRecentActions.js";
 
 export function getMatchingMessageRecentActions(
   pluginData: GuildPluginData<AutomodPluginType>,
@@ -15,7 +15,7 @@ export function getMatchingMessageRecentActions(
   within: number,
 ) {
   const stopProfiling = startProfiling(
-    pluginData.getKnubInstance().profiler,
+    pluginData.getVetyInstance().profiler,
     "automod:fns:getMatchingMessageRecentActions",
   );
   const since = moment.utc(message.posted_at).valueOf() - within;

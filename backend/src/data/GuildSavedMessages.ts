@@ -1,13 +1,14 @@
 import { GuildChannel, Message } from "discord.js";
 import moment from "moment-timezone";
-import { Repository, getRepository } from "typeorm";
-import { QueuedEventEmitter } from "../QueuedEventEmitter";
-import { noop } from "../utils";
-import { asyncMap } from "../utils/async";
-import { decryptJson, encryptJson } from "../utils/cryptHelpers";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { buildEntity } from "./buildEntity";
-import { ISavedMessageData, SavedMessage } from "./entities/SavedMessage";
+import { Repository } from "typeorm";
+import { QueuedEventEmitter } from "../QueuedEventEmitter.js";
+import { noop } from "../utils.js";
+import { asyncMap } from "../utils/async.js";
+import { decryptJson, encryptJson } from "../utils/cryptHelpers.js";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { buildEntity } from "./buildEntity.js";
+import { dataSource } from "./dataSource.js";
+import { ISavedMessageData, SavedMessage } from "./entities/SavedMessage.js";
 
 export class GuildSavedMessages extends BaseGuildRepository<SavedMessage> {
   private messages: Repository<SavedMessage>;
@@ -17,7 +18,7 @@ export class GuildSavedMessages extends BaseGuildRepository<SavedMessage> {
 
   constructor(guildId) {
     super(guildId);
-    this.messages = getRepository(SavedMessage);
+    this.messages = dataSource.getRepository(SavedMessage);
     this.events = new QueuedEventEmitter();
 
     this.toBePermanent = new Set();
@@ -118,6 +119,14 @@ export class GuildSavedMessages extends BaseGuildRepository<SavedMessage> {
       }));
     }
 
+    if (msg.reference && (msg.reference.messageId || msg.reference.channelId || msg.reference.guildId)) {
+      data.reference = {
+        messageId: msg.reference.messageId ?? null,
+        channelId: msg.reference.channelId ?? null,
+        guildId: msg.reference.guildId ?? null,
+      };
+    }
+
     return data;
   }
 
@@ -137,7 +146,7 @@ export class GuildSavedMessages extends BaseGuildRepository<SavedMessage> {
     return entity;
   }
 
-  async find(id: string, includeDeleted = false): Promise<SavedMessage | undefined> {
+  async find(id: string, includeDeleted = false): Promise<SavedMessage | null> {
     let query = this.messages
       .createQueryBuilder()
       .where("guild_id = :guild_id", { guild_id: this.guildId })
@@ -171,6 +180,10 @@ export class GuildSavedMessages extends BaseGuildRepository<SavedMessage> {
   }
 
   async getMultiple(messageIds: string[]): Promise<SavedMessage[]> {
+    if (messageIds.length === 0) {
+      return [];
+    }
+
     const results = await this.messages
       .createQueryBuilder()
       .where("guild_id = :guild_id", { guild_id: this.guildId })

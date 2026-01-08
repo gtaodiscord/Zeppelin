@@ -1,13 +1,14 @@
-import { getRepository, Repository } from "typeorm";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { VCAlert } from "./entities/VCAlert";
+import { Repository } from "typeorm";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { dataSource } from "./dataSource.js";
+import { VCAlert } from "./entities/VCAlert.js";
 
 export class GuildVCAlerts extends BaseGuildRepository {
   private allAlerts: Repository<VCAlert>;
 
   constructor(guildId) {
     super(guildId);
-    this.allAlerts = getRepository(VCAlert);
+    this.allAlerts = dataSource.getRepository(VCAlert);
   }
 
   async getOutdatedAlerts(): Promise<VCAlert[]> {
@@ -41,7 +42,9 @@ export class GuildVCAlerts extends BaseGuildRepository {
   }
 
   find(id: number) {
-    return this.allAlerts.findOne({ id });
+    return this.allAlerts.findOne({
+      where: { id },
+    });
   }
 
   async delete(id) {

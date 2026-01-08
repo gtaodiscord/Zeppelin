@@ -1,50 +1,37 @@
 import { GuildMember, Snowflake } from "discord.js";
 import { EventEmitter } from "events";
-import { GuildArchives } from "../../data/GuildArchives";
-import { GuildCases } from "../../data/GuildCases";
-import { onGuildEvent } from "../../data/GuildEvents";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildMutes } from "../../data/GuildMutes";
-import { makeIoTsConfigParser, mapToPublicFn } from "../../pluginUtils";
-import { CasesPlugin } from "../Cases/CasesPlugin";
-import { LogsPlugin } from "../Logs/LogsPlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { ClearBannedMutesCmd } from "./commands/ClearBannedMutesCmd";
-import { ClearMutesCmd } from "./commands/ClearMutesCmd";
-import { ClearMutesWithoutRoleCmd } from "./commands/ClearMutesWithoutRoleCmd";
-import { MutesCmd } from "./commands/MutesCmd";
-import { ClearActiveMuteOnMemberBanEvt } from "./events/ClearActiveMuteOnMemberBanEvt";
-import { ReapplyActiveMuteOnJoinEvt } from "./events/ReapplyActiveMuteOnJoinEvt";
-import { RegisterManualTimeoutsEvt } from "./events/RegisterManualTimeoutsEvt";
-import { clearMute } from "./functions/clearMute";
-import { muteUser } from "./functions/muteUser";
-import { offMutesEvent } from "./functions/offMutesEvent";
-import { onMutesEvent } from "./functions/onMutesEvent";
-import { renewTimeoutMute } from "./functions/renewTimeoutMute";
-import { unmuteUser } from "./functions/unmuteUser";
-import { ConfigSchema, MutesPluginType } from "./types";
+import { guildPlugin } from "vety";
+import { GuildArchives } from "../../data/GuildArchives.js";
+import { GuildCases } from "../../data/GuildCases.js";
+import { onGuildEvent } from "../../data/GuildEvents.js";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildMutes } from "../../data/GuildMutes.js";
+import { makePublicFn } from "../../pluginUtils.js";
+import { CasesPlugin } from "../Cases/CasesPlugin.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { LogsPlugin } from "../Logs/LogsPlugin.js";
+import { RoleManagerPlugin } from "../RoleManager/RoleManagerPlugin.js";
+import { ClearBannedMutesCmd } from "./commands/ClearBannedMutesCmd.js";
+import { ClearMutesCmd } from "./commands/ClearMutesCmd.js";
+import { ClearMutesWithoutRoleCmd } from "./commands/ClearMutesWithoutRoleCmd.js";
+import { MutesCmd } from "./commands/MutesCmd.js";
+import { ClearActiveMuteOnMemberBanEvt } from "./events/ClearActiveMuteOnMemberBanEvt.js";
+import { ReapplyActiveMuteOnJoinEvt } from "./events/ReapplyActiveMuteOnJoinEvt.js";
+import { RegisterManualTimeoutsEvt } from "./events/RegisterManualTimeoutsEvt.js";
+import { clearMute } from "./functions/clearMute.js";
+import { muteUser } from "./functions/muteUser.js";
+import { offMutesEvent } from "./functions/offMutesEvent.js";
+import { onMutesEvent } from "./functions/onMutesEvent.js";
+import { renewTimeoutMute } from "./functions/renewTimeoutMute.js";
+import { unmuteUser } from "./functions/unmuteUser.js";
+import { MutesPluginType, zMutesConfig } from "./types.js";
 
-const defaultOptions = {
-  config: {
-    mute_role: null,
-    move_to_voice_channel: null,
-    kick_from_voice_channel: false,
+export const MutesPlugin = guildPlugin<MutesPluginType>()({
+  name: "mutes",
 
-    dm_on_mute: false,
-    dm_on_update: false,
-    message_on_mute: false,
-    message_on_update: false,
-    message_channel: null,
-    mute_message: "You have been muted on the {guildName} server. Reason given: {reason}",
-    timed_mute_message: "You have been muted on the {guildName} server for {time}. Reason given: {reason}",
-    update_mute_message: "Your mute on the {guildName} server has been updated to {time}.",
-    remove_roles_on_mute: false,
-    restore_roles_on_mute: false,
-
-    can_view_list: false,
-    can_cleanup: false,
-  },
-  overrides: [
+  dependencies: () => [CasesPlugin, LogsPlugin, RoleManagerPlugin],
+  configSchema: zMutesConfig,
+  defaultOverrides: [
     {
       level: ">=50",
       config: {
@@ -58,19 +45,6 @@ const defaultOptions = {
       },
     },
   ],
-};
-
-export const MutesPlugin = zeppelinGuildPlugin<MutesPluginType>()({
-  name: "mutes",
-  showInDocs: true,
-  info: {
-    prettyName: "Mutes",
-    configSchema: ConfigSchema,
-  },
-
-  dependencies: () => [CasesPlugin, LogsPlugin],
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
 
   // prettier-ignore
   messageCommands: [
@@ -88,21 +62,18 @@ export const MutesPlugin = zeppelinGuildPlugin<MutesPluginType>()({
     RegisterManualTimeoutsEvt,
   ],
 
-  public: {
-    muteUser: mapToPublicFn(muteUser),
-    unmuteUser: mapToPublicFn(unmuteUser),
-    hasMutedRole(pluginData) {
-      return (member: GuildMember) => {
+  public(pluginData) {
+    return {
+      muteUser: makePublicFn(pluginData, muteUser),
+      unmuteUser: makePublicFn(pluginData, unmuteUser),
+      hasMutedRole: (member: GuildMember) => {
         const muteRole = pluginData.config.get().mute_role;
         return muteRole ? member.roles.cache.has(muteRole as Snowflake) : false;
-      };
-    },
-
-    on: mapToPublicFn(onMutesEvent),
-    off: mapToPublicFn(offMutesEvent),
-    getEventEmitter(pluginData) {
-      return () => pluginData.state.events;
-    },
+      },
+      on: makePublicFn(pluginData, onMutesEvent),
+      off: makePublicFn(pluginData, offMutesEvent),
+      getEventEmitter: () => pluginData.state.events,
+    };
   },
 
   beforeLoad(pluginData) {
@@ -114,6 +85,10 @@ export const MutesPlugin = zeppelinGuildPlugin<MutesPluginType>()({
     state.archives = GuildArchives.getGuildInstance(guild.id);
 
     state.events = new EventEmitter();
+  },
+
+  beforeStart(pluginData) {
+    pluginData.state.common = pluginData.getPlugin(CommonPlugin);
   },
 
   afterLoad(pluginData) {

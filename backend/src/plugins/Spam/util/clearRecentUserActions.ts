@@ -1,5 +1,5 @@
-import { GuildPluginData } from "knub";
-import { RecentActionType, SpamPluginType } from "../types";
+import { GuildPluginData } from "vety";
+import { RecentActionType, SpamPluginType } from "../types.js";
 
 export function clearRecentUserActions(
   pluginData: GuildPluginData<SpamPluginType>,

@@ -1,63 +1,135 @@
 import express from "express";
-import { guildPlugins } from "../plugins/availablePlugins";
-import { indentLines } from "../utils";
-import { notFound } from "./responses";
+import { z } from "zod";
+import { $ZodPipeDef } from "zod/v4/core";
+import { availableGuildPlugins } from "../plugins/availablePlugins.js";
+import { ZeppelinGuildPluginInfo } from "../types.js";
+import { indentLines } from "../utils.js";
+import { notFound } from "./responses.js";
 
-function formatConfigSchema(schema) {
-  if (schema._tag === "InterfaceType" || schema._tag === "PartialType") {
+function isZodObject(schema: z.ZodType): schema is z.ZodObject<any> {
+  return schema.def.type === "object";
+}
+
+function isZodRecord(schema: z.ZodType): schema is z.ZodRecord<any> {
+  return schema.def.type === "record";
+}
+
+function isZodOptional(schema: z.ZodType): schema is z.ZodOptional<any> {
+  return schema.def.type === "optional";
+}
+
+function isZodArray(schema: z.ZodType): schema is z.ZodArray<any> {
+  return schema.def.type === "array";
+}
+
+function isZodUnion(schema: z.ZodType): schema is z.ZodUnion<any> {
+  return schema.def.type === "union";
+}
+
+function isZodNullable(schema: z.ZodType): schema is z.ZodNullable<any> {
+  return schema.def.type === "nullable";
+}
+
+function isZodDefault(schema: z.ZodType): schema is z.ZodDefault<any> {
+  return schema.def.type === "default";
+}
+
+function isZodLiteral(schema: z.ZodType): schema is z.ZodLiteral<any> {
+  return schema.def.type === "literal";
+}
+
+function isZodIntersection(schema: z.ZodType): schema is z.ZodIntersection<any, any> {
+  return schema.def.type === "intersection";
+}
+
+function formatZodConfigSchema(schema: z.ZodType) {
+  if (isZodObject(schema)) {
     return (
       `{\n` +
-      Object.entries(schema.props)
-        .map(([k, value]) => indentLines(`${k}: ${formatConfigSchema(value)}`, 2))
+      Object.entries(schema.def.shape)
+        .map(([k, value]) => indentLines(`${k}: ${formatZodConfigSchema(value as z.ZodType)}`, 2))
         .join("\n") +
       "\n}"
     );
-  } else if (schema._tag === "DictionaryType") {
-    return "{\n" + indentLines(`[string]: ${formatConfigSchema(schema.codomain)}`, 2) + "\n}";
-  } else if (schema._tag === "ArrayType") {
-    return `Array<${formatConfigSchema(schema.type)}>`;
-  } else if (schema._tag === "UnionType") {
-    if (schema.name.startsWith("Nullable<")) {
-      return `Nullable<${formatConfigSchema(schema.types[0])}>`;
-    } else if (schema.name.startsWith("Optional<")) {
-      return `Optional<${formatConfigSchema(schema.types[0])}>`;
-    } else {
-      return schema.types.map((t) => formatConfigSchema(t)).join(" | ");
-    }
-  } else if (schema._tag === "IntersectionType") {
-    return schema.types.map((t) => formatConfigSchema(t)).join(" & ");
-  } else {
-    return schema.name;
   }
+  if (isZodRecord(schema)) {
+    return "{\n" + indentLines(`[string]: ${formatZodConfigSchema(schema.valueType as z.ZodType)}`, 2) + "\n}";
+  }
+  if (isZodOptional(schema)) {
+    return `Optional<${formatZodConfigSchema(schema.def.innerType)}>`;
+  }
+  if (isZodArray(schema)) {
+    return `Array<${formatZodConfigSchema(schema.def.element)}>`;
+  }
+  if (isZodUnion(schema)) {
+    return schema.def.options.map((t) => formatZodConfigSchema(t)).join(" | ");
+  }
+  if (isZodNullable(schema)) {
+    return `Nullable<${formatZodConfigSchema(schema.def.innerType)}>`;
+  }
+  if (isZodDefault(schema)) {
+    return formatZodConfigSchema(schema.def.innerType);
+  }
+  if (isZodLiteral(schema)) {
+    return schema.def.values;
+  }
+  if (isZodIntersection(schema)) {
+    return [
+      formatZodConfigSchema(schema.def.left as z.ZodType),
+      formatZodConfigSchema(schema.def.right as z.ZodType),
+    ].join(" & ");
+  }
+  if (schema.def.type === "string") {
+    return "string";
+  }
+  if (schema.def.type === "number") {
+    return "number";
+  }
+  if (schema.def.type === "boolean") {
+    return "boolean";
+  }
+  if (schema.def.type === "never") {
+    return "never";
+  }
+  if (schema.def.type === "pipe") {
+    return formatZodConfigSchema((schema.def as $ZodPipeDef).in as z.ZodType);
+  }
+  return "unknown";
 }
 
-export function initDocs(app: express.Express) {
-  const docsPlugins = guildPlugins.filter((plugin) => plugin.showInDocs);
+const availableGuildPluginsByName = availableGuildPlugins.reduce<Record<string, ZeppelinGuildPluginInfo>>(
+  (map, obj) => {
+    map[obj.plugin.name] = obj;
+    return map;
+  },
+  {},
+);
 
-  app.get("/docs/plugins", (req: express.Request, res: express.Response) => {
+export function initDocs(router: express.Router) {
+  const docsPlugins = availableGuildPlugins.filter((obj) => obj.docs.type !== "internal");
+
+  router.get("/docs/plugins", (req: express.Request, res: express.Response) => {
     res.json(
-      docsPlugins.map((plugin) => {
-        const thinInfo = plugin.info ? { prettyName: plugin.info.prettyName, legacy: plugin.info.legacy ?? false } : {};
-        return {
-          name: plugin.name,
-          info: thinInfo,
-        };
-      }),
+      docsPlugins.map((obj) => ({
+        name: obj.plugin.name,
+        info: {
+          prettyName: obj.docs.prettyName,
+          type: obj.docs.type,
+        },
+      })),
     );
   });
 
-  app.get("/docs/plugins/:pluginName", (req: express.Request, res: express.Response) => {
-    // prettier-ignore
-    const plugin = docsPlugins.find(_plugin => _plugin.name === req.params.pluginName);
-    if (!plugin) {
+  router.get("/docs/plugins/:pluginName", (req: express.Request, res: express.Response) => {
+    const pluginInfo = availableGuildPluginsByName[req.params.pluginName];
+    if (!pluginInfo) {
       return notFound(res);
     }
 
-    const name = plugin.name;
-    const info = { ...(plugin.info || {}) };
-    delete info.configSchema;
+    const { configSchema, ...info } = pluginInfo.docs;
+    const formattedConfigSchema = formatZodConfigSchema(configSchema);
 
-    const messageCommands = (plugin.messageCommands || []).map((cmd) => ({
+    const messageCommands = (pluginInfo.plugin.messageCommands || []).map((cmd) => ({
       trigger: cmd.trigger,
       permission: cmd.permission,
       signature: cmd.signature,
@@ -66,13 +138,12 @@ export function initDocs(app: express.Express) {
       config: cmd.config,
     }));
 
-    const defaultOptions = plugin.defaultOptions || {};
-    const configSchema = plugin.info?.configSchema && formatConfigSchema(plugin.info.configSchema);
+    const defaultOptions = pluginInfo.docs.configSchema.safeParse({}).data ?? {};
 
     res.json({
-      name,
+      name: pluginInfo.plugin.name,
       info,
-      configSchema,
+      configSchema: formattedConfigSchema,
       defaultOptions,
       messageCommands,
     });

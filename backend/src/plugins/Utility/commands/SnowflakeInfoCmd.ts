@@ -1,6 +1,6 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { getSnowflakeInfoEmbed } from "../functions/getSnowflakeInfoEmbed";
-import { utilityCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { getSnowflakeInfoEmbed } from "../functions/getSnowflakeInfoEmbed.js";
+import { utilityCmd } from "../types.js";
 
 export const SnowflakeInfoCmd = utilityCmd({
   trigger: ["snowflake", "snowflakeinfo"],
@@ -12,8 +12,8 @@ export const SnowflakeInfoCmd = utilityCmd({
     id: ct.anyId(),
   },
 
-  async run({ message, args, pluginData }) {
-    const embed = await getSnowflakeInfoEmbed(pluginData, args.id, false, message.author.id);
+  async run({ message, args }) {
+    const embed = await getSnowflakeInfoEmbed(args.id, false);
     message.channel.send({ embeds: [embed] });
   },
 });

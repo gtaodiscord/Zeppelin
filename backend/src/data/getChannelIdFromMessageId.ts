@@ -1,14 +1,15 @@
-import { getRepository, Repository } from "typeorm";
-import { SavedMessage } from "./entities/SavedMessage";
+import { Repository } from "typeorm";
+import { dataSource } from "./dataSource.js";
+import { SavedMessage } from "./entities/SavedMessage.js";
 
 let repository: Repository<SavedMessage>;
 
 export async function getChannelIdFromMessageId(messageId: string): Promise<string | null> {
   if (!repository) {
-    repository = getRepository(SavedMessage);
+    repository = dataSource.getRepository(SavedMessage);
   }
 
-  const savedMessage = await repository.findOne(messageId);
+  const savedMessage = await repository.findOne({ where: { id: messageId } });
   if (savedMessage) {
     return savedMessage.channel_id;
   }

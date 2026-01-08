@@ -1,12 +1,11 @@
-import * as t from "io-ts";
-import { ExtendedMatchParams, GuildPluginData } from "knub";
-import { Tag, TagsPluginType } from "../types";
+import { ExtendedMatchParams, GuildPluginData } from "vety";
+import { TTag, TagsPluginType } from "../types.js";
 
 export async function findTagByName(
   pluginData: GuildPluginData<TagsPluginType>,
   name: string,
   matchParams: ExtendedMatchParams = {},
-): Promise<t.TypeOf<typeof Tag> | null> {
+): Promise<TTag | null> {
   const config = await pluginData.config.getMatchingConfig(matchParams);
 
   // Tag from a hardcoded category

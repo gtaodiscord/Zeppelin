@@ -1,8 +1,8 @@
 import moment from "moment-timezone";
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { getBaseUrl, sendErrorMessage } from "../../../pluginUtils";
-import { canReadChannel } from "../../../utils/canReadChannel";
-import { utilityCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { getBaseUrl, resolveMessageMember } from "../../../pluginUtils.js";
+import { canReadChannel } from "../../../utils/canReadChannel.js";
+import { utilityCmd } from "../types.js";
 
 export const SourceCmd = utilityCmd({
   trigger: "source",
@@ -15,14 +15,15 @@ export const SourceCmd = utilityCmd({
   },
 
   async run({ message: cmdMessage, args, pluginData }) {
-    if (!canReadChannel(args.message.channel, cmdMessage.member)) {
-      sendErrorMessage(pluginData, cmdMessage.channel, "Unknown message");
+    const cmdAuthorMember = await resolveMessageMember(cmdMessage);
+    if (!canReadChannel(args.message.channel, cmdAuthorMember)) {
+      void pluginData.state.common.sendErrorMessage(cmdMessage, "Unknown message");
       return;
     }
 
     const message = await args.message.channel.messages.fetch(args.message.messageId);
     if (!message) {
-      sendErrorMessage(pluginData, cmdMessage.channel, "Unknown message");
+      void pluginData.state.common.sendErrorMessage(cmdMessage, "Unknown message");
       return;
     }
 

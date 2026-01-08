@@ -1,17 +1,15 @@
-import { CooldownManager, PluginOptions } from "knub";
-import DefaultLogMessages from "../../data/DefaultLogMessages.json";
-import { GuildArchives } from "../../data/GuildArchives";
-import { GuildCases } from "../../data/GuildCases";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { LogType } from "../../data/LogType";
-import { logger } from "../../logger";
-import { makeIoTsConfigParser, mapToPublicFn } from "../../pluginUtils";
-import { discardRegExpRunner, getRegExpRunner } from "../../regExpRunners";
-import { TypedTemplateSafeValueContainer, createTypedTemplateSafeValueContainer } from "../../templateFormatter";
-import { TimeAndDatePlugin } from "../TimeAndDate/TimeAndDatePlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { LogsChannelCreateEvt, LogsChannelDeleteEvt, LogsChannelUpdateEvt } from "./events/LogsChannelModifyEvts";
+import { CooldownManager, guildPlugin } from "vety";
+import { GuildArchives } from "../../data/GuildArchives.js";
+import { GuildCases } from "../../data/GuildCases.js";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { LogType } from "../../data/LogType.js";
+import { logger } from "../../logger.js";
+import { makePublicFn } from "../../pluginUtils.js";
+import { discardRegExpRunner, getRegExpRunner } from "../../regExpRunners.js";
+import { createTypedTemplateSafeValueContainer } from "../../templateFormatter.js";
+import { TimeAndDatePlugin } from "../TimeAndDate/TimeAndDatePlugin.js";
+import { LogsChannelCreateEvt, LogsChannelDeleteEvt, LogsChannelUpdateEvt } from "./events/LogsChannelModifyEvts.js";
 import {
   LogsEmojiCreateEvt,
   LogsEmojiDeleteEvt,
@@ -19,137 +17,117 @@ import {
   LogsStickerCreateEvt,
   LogsStickerDeleteEvt,
   LogsStickerUpdateEvt,
-} from "./events/LogsEmojiAndStickerModifyEvts";
-import { LogsGuildMemberAddEvt } from "./events/LogsGuildMemberAddEvt";
-import { LogsGuildMemberRemoveEvt } from "./events/LogsGuildMemberRemoveEvt";
-import { LogsRoleCreateEvt, LogsRoleDeleteEvt, LogsRoleUpdateEvt } from "./events/LogsRoleModifyEvts";
+} from "./events/LogsEmojiAndStickerModifyEvts.js";
+import { LogsGuildMemberAddEvt } from "./events/LogsGuildMemberAddEvt.js";
+import { LogsGuildMemberRemoveEvt } from "./events/LogsGuildMemberRemoveEvt.js";
+import { LogsRoleCreateEvt, LogsRoleDeleteEvt, LogsRoleUpdateEvt } from "./events/LogsRoleModifyEvts.js";
 import {
   LogsStageInstanceCreateEvt,
   LogsStageInstanceDeleteEvt,
   LogsStageInstanceUpdateEvt,
-} from "./events/LogsStageInstanceModifyEvts";
-import { LogsThreadCreateEvt, LogsThreadDeleteEvt, LogsThreadUpdateEvt } from "./events/LogsThreadModifyEvts";
-import { LogsGuildMemberUpdateEvt } from "./events/LogsUserUpdateEvts";
-import { LogsVoiceStateUpdateEvt } from "./events/LogsVoiceChannelEvts";
-import { ConfigSchema, FORMAT_NO_TIMESTAMP, ILogTypeData, LogsPluginType, TLogChannel } from "./types";
-import { getLogMessage } from "./util/getLogMessage";
-import { log } from "./util/log";
-import { onMessageDelete } from "./util/onMessageDelete";
-import { onMessageDeleteBulk } from "./util/onMessageDeleteBulk";
-import { onMessageUpdate } from "./util/onMessageUpdate";
+} from "./events/LogsStageInstanceModifyEvts.js";
+import { LogsThreadCreateEvt, LogsThreadDeleteEvt, LogsThreadUpdateEvt } from "./events/LogsThreadModifyEvts.js";
+import { LogsGuildMemberUpdateEvt } from "./events/LogsUserUpdateEvts.js";
+import { LogsVoiceStateUpdateEvt } from "./events/LogsVoiceChannelEvts.js";
+import { LogsPluginType, zLogsConfig } from "./types.js";
+import { getLogMessage } from "./util/getLogMessage.js";
+import { log } from "./util/log.js";
+import { onMessageDelete } from "./util/onMessageDelete.js";
+import { onMessageDeleteBulk } from "./util/onMessageDeleteBulk.js";
+import { onMessageUpdate } from "./util/onMessageUpdate.js";
 
 import { escapeCodeBlock } from "discord.js";
-import { InternalPosterPlugin } from "../InternalPoster/InternalPosterPlugin";
-import { LogsGuildMemberRoleChangeEvt } from "./events/LogsGuildMemberRoleChangeEvt";
-import { logAutomodAction } from "./logFunctions/logAutomodAction";
-import { logBotAlert } from "./logFunctions/logBotAlert";
-import { logCaseCreate } from "./logFunctions/logCaseCreate";
-import { logCaseDelete } from "./logFunctions/logCaseDelete";
-import { logCaseUpdate } from "./logFunctions/logCaseUpdate";
-import { logCensor } from "./logFunctions/logCensor";
-import { logChannelCreate } from "./logFunctions/logChannelCreate";
-import { logChannelDelete } from "./logFunctions/logChannelDelete";
-import { logChannelUpdate } from "./logFunctions/logChannelUpdate";
-import { logClean } from "./logFunctions/logClean";
-import { logDmFailed } from "./logFunctions/logDmFailed";
-import { logEmojiCreate } from "./logFunctions/logEmojiCreate";
-import { logEmojiDelete } from "./logFunctions/logEmojiDelete";
-import { logEmojiUpdate } from "./logFunctions/logEmojiUpdate";
-import { logMassBan } from "./logFunctions/logMassBan";
-import { logMassMute } from "./logFunctions/logMassMute";
-import { logMassUnban } from "./logFunctions/logMassUnban";
-import { logMemberBan } from "./logFunctions/logMemberBan";
-import { logMemberForceban } from "./logFunctions/logMemberForceban";
-import { logMemberJoin } from "./logFunctions/logMemberJoin";
-import { logMemberJoinWithPriorRecords } from "./logFunctions/logMemberJoinWithPriorRecords";
-import { logMemberKick } from "./logFunctions/logMemberKick";
-import { logMemberLeave } from "./logFunctions/logMemberLeave";
-import { logMemberMute } from "./logFunctions/logMemberMute";
-import { logMemberMuteExpired } from "./logFunctions/logMemberMuteExpired";
-import { logMemberMuteRejoin } from "./logFunctions/logMemberMuteRejoin";
-import { logMemberNickChange } from "./logFunctions/logMemberNickChange";
-import { logMemberNote } from "./logFunctions/logMemberNote";
-import { logMemberRestore } from "./logFunctions/logMemberRestore";
-import { logMemberRoleAdd } from "./logFunctions/logMemberRoleAdd";
-import { logMemberRoleChanges } from "./logFunctions/logMemberRoleChanges";
-import { logMemberRoleRemove } from "./logFunctions/logMemberRoleRemove";
-import { logMemberTimedBan } from "./logFunctions/logMemberTimedBan";
-import { logMemberTimedMute } from "./logFunctions/logMemberTimedMute";
-import { logMemberTimedUnban } from "./logFunctions/logMemberTimedUnban";
-import { logMemberTimedUnmute } from "./logFunctions/logMemberTimedUnmute";
-import { logMemberUnban } from "./logFunctions/logMemberUnban";
-import { logMemberUnmute } from "./logFunctions/logMemberUnmute";
-import { logMemberWarn } from "./logFunctions/logMemberWarn";
-import { logMessageDelete } from "./logFunctions/logMessageDelete";
-import { logMessageDeleteAuto } from "./logFunctions/logMessageDeleteAuto";
-import { logMessageDeleteBare } from "./logFunctions/logMessageDeleteBare";
-import { logMessageDeleteBulk } from "./logFunctions/logMessageDeleteBulk";
-import { logMessageEdit } from "./logFunctions/logMessageEdit";
-import { logMessageSpamDetected } from "./logFunctions/logMessageSpamDetected";
-import { logOtherSpamDetected } from "./logFunctions/logOtherSpamDetected";
-import { logPostedScheduledMessage } from "./logFunctions/logPostedScheduledMessage";
-import { logRepeatedMessage } from "./logFunctions/logRepeatedMessage";
-import { logRoleCreate } from "./logFunctions/logRoleCreate";
-import { logRoleDelete } from "./logFunctions/logRoleDelete";
-import { logRoleUpdate } from "./logFunctions/logRoleUpdate";
-import { logScheduledMessage } from "./logFunctions/logScheduledMessage";
-import { logScheduledRepeatedMessage } from "./logFunctions/logScheduledRepeatedMessage";
-import { logSetAntiraidAuto } from "./logFunctions/logSetAntiraidAuto";
-import { logSetAntiraidUser } from "./logFunctions/logSetAntiraidUser";
-import { logStageInstanceCreate } from "./logFunctions/logStageInstanceCreate";
-import { logStageInstanceDelete } from "./logFunctions/logStageInstanceDelete";
-import { logStageInstanceUpdate } from "./logFunctions/logStageInstanceUpdate";
-import { logStickerCreate } from "./logFunctions/logStickerCreate";
-import { logStickerDelete } from "./logFunctions/logStickerDelete";
-import { logStickerUpdate } from "./logFunctions/logStickerUpdate";
-import { logThreadCreate } from "./logFunctions/logThreadCreate";
-import { logThreadDelete } from "./logFunctions/logThreadDelete";
-import { logThreadUpdate } from "./logFunctions/logThreadUpdate";
-import { logVoiceChannelForceDisconnect } from "./logFunctions/logVoiceChannelForceDisconnect";
-import { logVoiceChannelForceMove } from "./logFunctions/logVoiceChannelForceMove";
-import { logVoiceChannelJoin } from "./logFunctions/logVoiceChannelJoin";
-import { logVoiceChannelLeave } from "./logFunctions/logVoiceChannelLeave";
-import { logVoiceChannelMove } from "./logFunctions/logVoiceChannelMove";
+import { InternalPosterPlugin } from "../InternalPoster/InternalPosterPlugin.js";
+import { LogsGuildMemberRoleChangeEvt } from "./events/LogsGuildMemberRoleChangeEvt.js";
+import { logAutomodAction } from "./logFunctions/logAutomodAction.js";
+import { logBotAlert } from "./logFunctions/logBotAlert.js";
+import { logCaseCreate } from "./logFunctions/logCaseCreate.js";
+import { logCaseDelete } from "./logFunctions/logCaseDelete.js";
+import { logCaseUpdate } from "./logFunctions/logCaseUpdate.js";
+import { logCensor } from "./logFunctions/logCensor.js";
+import { logChannelCreate } from "./logFunctions/logChannelCreate.js";
+import { logChannelDelete } from "./logFunctions/logChannelDelete.js";
+import { logChannelUpdate } from "./logFunctions/logChannelUpdate.js";
+import { logClean } from "./logFunctions/logClean.js";
+import { logDmFailed } from "./logFunctions/logDmFailed.js";
+import { logEmojiCreate } from "./logFunctions/logEmojiCreate.js";
+import { logEmojiDelete } from "./logFunctions/logEmojiDelete.js";
+import { logEmojiUpdate } from "./logFunctions/logEmojiUpdate.js";
+import { logMassBan } from "./logFunctions/logMassBan.js";
+import { logMassMute } from "./logFunctions/logMassMute.js";
+import { logMassUnban } from "./logFunctions/logMassUnban.js";
+import { logMemberBan } from "./logFunctions/logMemberBan.js";
+import { logMemberForceban } from "./logFunctions/logMemberForceban.js";
+import { logMemberJoin } from "./logFunctions/logMemberJoin.js";
+import { logMemberJoinWithPriorRecords } from "./logFunctions/logMemberJoinWithPriorRecords.js";
+import { logMemberKick } from "./logFunctions/logMemberKick.js";
+import { logMemberLeave } from "./logFunctions/logMemberLeave.js";
+import { logMemberMute } from "./logFunctions/logMemberMute.js";
+import { logMemberMuteExpired } from "./logFunctions/logMemberMuteExpired.js";
+import { logMemberMuteRejoin } from "./logFunctions/logMemberMuteRejoin.js";
+import { logMemberNickChange } from "./logFunctions/logMemberNickChange.js";
+import { logMemberNote } from "./logFunctions/logMemberNote.js";
+import { logMemberRestore } from "./logFunctions/logMemberRestore.js";
+import { logMemberRoleAdd } from "./logFunctions/logMemberRoleAdd.js";
+import { logMemberRoleChanges } from "./logFunctions/logMemberRoleChanges.js";
+import { logMemberRoleRemove } from "./logFunctions/logMemberRoleRemove.js";
+import { logMemberTimedBan } from "./logFunctions/logMemberTimedBan.js";
+import { logMemberTimedMute } from "./logFunctions/logMemberTimedMute.js";
+import { logMemberTimedUnban } from "./logFunctions/logMemberTimedUnban.js";
+import { logMemberTimedUnmute } from "./logFunctions/logMemberTimedUnmute.js";
+import { logMemberUnban } from "./logFunctions/logMemberUnban.js";
+import { logMemberUnmute } from "./logFunctions/logMemberUnmute.js";
+import { logMemberWarn } from "./logFunctions/logMemberWarn.js";
+import { logMessageDelete } from "./logFunctions/logMessageDelete.js";
+import { logMessageDeleteAuto } from "./logFunctions/logMessageDeleteAuto.js";
+import { logMessageDeleteBare } from "./logFunctions/logMessageDeleteBare.js";
+import { logMessageDeleteBulk } from "./logFunctions/logMessageDeleteBulk.js";
+import { logMessageEdit } from "./logFunctions/logMessageEdit.js";
+import { logMessageSpamDetected } from "./logFunctions/logMessageSpamDetected.js";
+import { logOtherSpamDetected } from "./logFunctions/logOtherSpamDetected.js";
+import { logPostedScheduledMessage } from "./logFunctions/logPostedScheduledMessage.js";
+import { logRepeatedMessage } from "./logFunctions/logRepeatedMessage.js";
+import { logRoleCreate } from "./logFunctions/logRoleCreate.js";
+import { logRoleDelete } from "./logFunctions/logRoleDelete.js";
+import { logRoleUpdate } from "./logFunctions/logRoleUpdate.js";
+import { logScheduledMessage } from "./logFunctions/logScheduledMessage.js";
+import { logScheduledRepeatedMessage } from "./logFunctions/logScheduledRepeatedMessage.js";
+import { logSetAntiraidAuto } from "./logFunctions/logSetAntiraidAuto.js";
+import { logSetAntiraidUser } from "./logFunctions/logSetAntiraidUser.js";
+import { logStageInstanceCreate } from "./logFunctions/logStageInstanceCreate.js";
+import { logStageInstanceDelete } from "./logFunctions/logStageInstanceDelete.js";
+import { logStageInstanceUpdate } from "./logFunctions/logStageInstanceUpdate.js";
+import { logStickerCreate } from "./logFunctions/logStickerCreate.js";
+import { logStickerDelete } from "./logFunctions/logStickerDelete.js";
+import { logStickerUpdate } from "./logFunctions/logStickerUpdate.js";
+import { logThreadCreate } from "./logFunctions/logThreadCreate.js";
+import { logThreadDelete } from "./logFunctions/logThreadDelete.js";
+import { logThreadUpdate } from "./logFunctions/logThreadUpdate.js";
+import { logVoiceChannelForceDisconnect } from "./logFunctions/logVoiceChannelForceDisconnect.js";
+import { logVoiceChannelForceMove } from "./logFunctions/logVoiceChannelForceMove.js";
+import { logVoiceChannelJoin } from "./logFunctions/logVoiceChannelJoin.js";
+import { logVoiceChannelLeave } from "./logFunctions/logVoiceChannelLeave.js";
+import { logVoiceChannelMove } from "./logFunctions/logVoiceChannelMove.js";
 
 // The `any` cast here is to prevent TypeScript from locking up from the circular dependency
 function getCasesPlugin(): Promise<any> {
   return import("../Cases/CasesPlugin.js") as Promise<any>;
 }
 
-const defaultOptions: PluginOptions<LogsPluginType> = {
-  config: {
-    channels: {},
-    format: {
-      timestamp: FORMAT_NO_TIMESTAMP, // Legacy/deprecated, use timestamp_format below instead
-      ...DefaultLogMessages,
-    },
-    ping_user: true, // Legacy/deprecated, if below is false mentions wont actually ping. In case you really want the old behavior, set below to true
-    allow_user_mentions: false,
-    timestamp_format: "[<t:]X[>]",
-    include_embed_timestamp: true,
-  },
+export const LogsPlugin = guildPlugin<LogsPluginType>()({
+  name: "logs",
 
-  overrides: [
+  dependencies: async () => [TimeAndDatePlugin, InternalPosterPlugin, (await getCasesPlugin()).CasesPlugin],
+  configSchema: zLogsConfig,
+  defaultOverrides: [
     {
       level: ">=50",
       config: {
-        ping_user: false, // Legacy/deprecated, read comment on global ping_user option
+        // Legacy/deprecated, read comment on global ping_user option
+        ping_user: false,
       },
     },
   ],
-};
-
-export const LogsPlugin = zeppelinGuildPlugin<LogsPluginType>()({
-  name: "logs",
-  showInDocs: true,
-  info: {
-    prettyName: "Logs",
-    configSchema: ConfigSchema,
-  },
-
-  dependencies: async () => [TimeAndDatePlugin, InternalPosterPlugin, (await getCasesPlugin()).CasesPlugin],
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
 
   events: [
     LogsGuildMemberAddEvt,
@@ -177,86 +155,79 @@ export const LogsPlugin = zeppelinGuildPlugin<LogsPluginType>()({
     LogsGuildMemberRoleChangeEvt,
   ],
 
-  public: {
-    getLogMessage: (pluginData) => {
-      return <TLogType extends keyof ILogTypeData>(
-        type: TLogType,
-        data: TypedTemplateSafeValueContainer<ILogTypeData[TLogType]>,
-        opts?: Pick<TLogChannel, "format" | "timestamp_format" | "include_embed_timestamp">,
-      ) => {
-        return getLogMessage(pluginData, type, data, opts);
-      };
-    },
-
-    logAutomodAction: mapToPublicFn(logAutomodAction),
-    logBotAlert: mapToPublicFn(logBotAlert),
-    logCaseCreate: mapToPublicFn(logCaseCreate),
-    logCaseDelete: mapToPublicFn(logCaseDelete),
-    logCaseUpdate: mapToPublicFn(logCaseUpdate),
-    logCensor: mapToPublicFn(logCensor),
-    logChannelCreate: mapToPublicFn(logChannelCreate),
-    logChannelDelete: mapToPublicFn(logChannelDelete),
-    logChannelUpdate: mapToPublicFn(logChannelUpdate),
-    logClean: mapToPublicFn(logClean),
-    logEmojiCreate: mapToPublicFn(logEmojiCreate),
-    logEmojiDelete: mapToPublicFn(logEmojiDelete),
-    logEmojiUpdate: mapToPublicFn(logEmojiUpdate),
-    logMassBan: mapToPublicFn(logMassBan),
-    logMassMute: mapToPublicFn(logMassMute),
-    logMassUnban: mapToPublicFn(logMassUnban),
-    logMemberBan: mapToPublicFn(logMemberBan),
-    logMemberForceban: mapToPublicFn(logMemberForceban),
-    logMemberJoin: mapToPublicFn(logMemberJoin),
-    logMemberJoinWithPriorRecords: mapToPublicFn(logMemberJoinWithPriorRecords),
-    logMemberKick: mapToPublicFn(logMemberKick),
-    logMemberLeave: mapToPublicFn(logMemberLeave),
-    logMemberMute: mapToPublicFn(logMemberMute),
-    logMemberMuteExpired: mapToPublicFn(logMemberMuteExpired),
-    logMemberMuteRejoin: mapToPublicFn(logMemberMuteRejoin),
-    logMemberNickChange: mapToPublicFn(logMemberNickChange),
-    logMemberNote: mapToPublicFn(logMemberNote),
-    logMemberRestore: mapToPublicFn(logMemberRestore),
-    logMemberRoleAdd: mapToPublicFn(logMemberRoleAdd),
-    logMemberRoleChanges: mapToPublicFn(logMemberRoleChanges),
-    logMemberRoleRemove: mapToPublicFn(logMemberRoleRemove),
-    logMemberTimedBan: mapToPublicFn(logMemberTimedBan),
-    logMemberTimedMute: mapToPublicFn(logMemberTimedMute),
-    logMemberTimedUnban: mapToPublicFn(logMemberTimedUnban),
-    logMemberTimedUnmute: mapToPublicFn(logMemberTimedUnmute),
-    logMemberUnban: mapToPublicFn(logMemberUnban),
-    logMemberUnmute: mapToPublicFn(logMemberUnmute),
-    logMemberWarn: mapToPublicFn(logMemberWarn),
-    logMessageDelete: mapToPublicFn(logMessageDelete),
-    logMessageDeleteAuto: mapToPublicFn(logMessageDeleteAuto),
-    logMessageDeleteBare: mapToPublicFn(logMessageDeleteBare),
-    logMessageDeleteBulk: mapToPublicFn(logMessageDeleteBulk),
-    logMessageEdit: mapToPublicFn(logMessageEdit),
-    logMessageSpamDetected: mapToPublicFn(logMessageSpamDetected),
-    logOtherSpamDetected: mapToPublicFn(logOtherSpamDetected),
-    logPostedScheduledMessage: mapToPublicFn(logPostedScheduledMessage),
-    logRepeatedMessage: mapToPublicFn(logRepeatedMessage),
-    logRoleCreate: mapToPublicFn(logRoleCreate),
-    logRoleDelete: mapToPublicFn(logRoleDelete),
-    logRoleUpdate: mapToPublicFn(logRoleUpdate),
-    logScheduledMessage: mapToPublicFn(logScheduledMessage),
-    logScheduledRepeatedMessage: mapToPublicFn(logScheduledRepeatedMessage),
-    logSetAntiraidAuto: mapToPublicFn(logSetAntiraidAuto),
-    logSetAntiraidUser: mapToPublicFn(logSetAntiraidUser),
-    logStageInstanceCreate: mapToPublicFn(logStageInstanceCreate),
-    logStageInstanceDelete: mapToPublicFn(logStageInstanceDelete),
-    logStageInstanceUpdate: mapToPublicFn(logStageInstanceUpdate),
-    logStickerCreate: mapToPublicFn(logStickerCreate),
-    logStickerDelete: mapToPublicFn(logStickerDelete),
-    logStickerUpdate: mapToPublicFn(logStickerUpdate),
-    logThreadCreate: mapToPublicFn(logThreadCreate),
-    logThreadDelete: mapToPublicFn(logThreadDelete),
-    logThreadUpdate: mapToPublicFn(logThreadUpdate),
-    logVoiceChannelForceDisconnect: mapToPublicFn(logVoiceChannelForceDisconnect),
-    logVoiceChannelForceMove: mapToPublicFn(logVoiceChannelForceMove),
-    logVoiceChannelJoin: mapToPublicFn(logVoiceChannelJoin),
-    logVoiceChannelLeave: mapToPublicFn(logVoiceChannelLeave),
-    logVoiceChannelMove: mapToPublicFn(logVoiceChannelMove),
-    logDmFailed: mapToPublicFn(logDmFailed),
+  public(pluginData) {
+    return {
+      getLogMessage: makePublicFn(pluginData, getLogMessage),
+      logAutomodAction: makePublicFn(pluginData, logAutomodAction),
+      logBotAlert: makePublicFn(pluginData, logBotAlert),
+      logCaseCreate: makePublicFn(pluginData, logCaseCreate),
+      logCaseDelete: makePublicFn(pluginData, logCaseDelete),
+      logCaseUpdate: makePublicFn(pluginData, logCaseUpdate),
+      logCensor: makePublicFn(pluginData, logCensor),
+      logChannelCreate: makePublicFn(pluginData, logChannelCreate),
+      logChannelDelete: makePublicFn(pluginData, logChannelDelete),
+      logChannelUpdate: makePublicFn(pluginData, logChannelUpdate),
+      logClean: makePublicFn(pluginData, logClean),
+      logEmojiCreate: makePublicFn(pluginData, logEmojiCreate),
+      logEmojiDelete: makePublicFn(pluginData, logEmojiDelete),
+      logEmojiUpdate: makePublicFn(pluginData, logEmojiUpdate),
+      logMassBan: makePublicFn(pluginData, logMassBan),
+      logMassMute: makePublicFn(pluginData, logMassMute),
+      logMassUnban: makePublicFn(pluginData, logMassUnban),
+      logMemberBan: makePublicFn(pluginData, logMemberBan),
+      logMemberForceban: makePublicFn(pluginData, logMemberForceban),
+      logMemberJoin: makePublicFn(pluginData, logMemberJoin),
+      logMemberJoinWithPriorRecords: makePublicFn(pluginData, logMemberJoinWithPriorRecords),
+      logMemberKick: makePublicFn(pluginData, logMemberKick),
+      logMemberLeave: makePublicFn(pluginData, logMemberLeave),
+      logMemberMute: makePublicFn(pluginData, logMemberMute),
+      logMemberMuteExpired: makePublicFn(pluginData, logMemberMuteExpired),
+      logMemberMuteRejoin: makePublicFn(pluginData, logMemberMuteRejoin),
+      logMemberNickChange: makePublicFn(pluginData, logMemberNickChange),
+      logMemberNote: makePublicFn(pluginData, logMemberNote),
+      logMemberRestore: makePublicFn(pluginData, logMemberRestore),
+      logMemberRoleAdd: makePublicFn(pluginData, logMemberRoleAdd),
+      logMemberRoleChanges: makePublicFn(pluginData, logMemberRoleChanges),
+      logMemberRoleRemove: makePublicFn(pluginData, logMemberRoleRemove),
+      logMemberTimedBan: makePublicFn(pluginData, logMemberTimedBan),
+      logMemberTimedMute: makePublicFn(pluginData, logMemberTimedMute),
+      logMemberTimedUnban: makePublicFn(pluginData, logMemberTimedUnban),
+      logMemberTimedUnmute: makePublicFn(pluginData, logMemberTimedUnmute),
+      logMemberUnban: makePublicFn(pluginData, logMemberUnban),
+      logMemberUnmute: makePublicFn(pluginData, logMemberUnmute),
+      logMemberWarn: makePublicFn(pluginData, logMemberWarn),
+      logMessageDelete: makePublicFn(pluginData, logMessageDelete),
+      logMessageDeleteAuto: makePublicFn(pluginData, logMessageDeleteAuto),
+      logMessageDeleteBare: makePublicFn(pluginData, logMessageDeleteBare),
+      logMessageDeleteBulk: makePublicFn(pluginData, logMessageDeleteBulk),
+      logMessageEdit: makePublicFn(pluginData, logMessageEdit),
+      logMessageSpamDetected: makePublicFn(pluginData, logMessageSpamDetected),
+      logOtherSpamDetected: makePublicFn(pluginData, logOtherSpamDetected),
+      logPostedScheduledMessage: makePublicFn(pluginData, logPostedScheduledMessage),
+      logRepeatedMessage: makePublicFn(pluginData, logRepeatedMessage),
+      logRoleCreate: makePublicFn(pluginData, logRoleCreate),
+      logRoleDelete: makePublicFn(pluginData, logRoleDelete),
+      logRoleUpdate: makePublicFn(pluginData, logRoleUpdate),
+      logScheduledMessage: makePublicFn(pluginData, logScheduledMessage),
+      logScheduledRepeatedMessage: makePublicFn(pluginData, logScheduledRepeatedMessage),
+      logSetAntiraidAuto: makePublicFn(pluginData, logSetAntiraidAuto),
+      logSetAntiraidUser: makePublicFn(pluginData, logSetAntiraidUser),
+      logStageInstanceCreate: makePublicFn(pluginData, logStageInstanceCreate),
+      logStageInstanceDelete: makePublicFn(pluginData, logStageInstanceDelete),
+      logStageInstanceUpdate: makePublicFn(pluginData, logStageInstanceUpdate),
+      logStickerCreate: makePublicFn(pluginData, logStickerCreate),
+      logStickerDelete: makePublicFn(pluginData, logStickerDelete),
+      logStickerUpdate: makePublicFn(pluginData, logStickerUpdate),
+      logThreadCreate: makePublicFn(pluginData, logThreadCreate),
+      logThreadDelete: makePublicFn(pluginData, logThreadDelete),
+      logThreadUpdate: makePublicFn(pluginData, logThreadUpdate),
+      logVoiceChannelForceDisconnect: makePublicFn(pluginData, logVoiceChannelForceDisconnect),
+      logVoiceChannelForceMove: makePublicFn(pluginData, logVoiceChannelForceMove),
+      logVoiceChannelJoin: makePublicFn(pluginData, logVoiceChannelJoin),
+      logVoiceChannelLeave: makePublicFn(pluginData, logVoiceChannelLeave),
+      logVoiceChannelMove: makePublicFn(pluginData, logVoiceChannelMove),
+      logDmFailed: makePublicFn(pluginData, logDmFailed),
+    };
   },
 
   beforeLoad(pluginData) {

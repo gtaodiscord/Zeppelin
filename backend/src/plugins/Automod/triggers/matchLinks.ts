@@ -1,15 +1,13 @@
 import { escapeInlineCode } from "discord.js";
-import * as t from "io-ts";
-import { allowTimeout } from "../../../RegExpRunner";
-import { phishermanDomainIsSafe } from "../../../data/Phisherman";
-import { getUrlsInString, tNullable } from "../../../utils";
-import { mergeRegexes } from "../../../utils/mergeRegexes";
-import { mergeWordsIntoRegex } from "../../../utils/mergeWordsIntoRegex";
-import { TRegex } from "../../../validatorUtils";
-import { PhishermanPlugin } from "../../Phisherman/PhishermanPlugin";
-import { getTextMatchPartialSummary } from "../functions/getTextMatchPartialSummary";
-import { MatchableTextType, matchMultipleTextTypesOnMessage } from "../functions/matchMultipleTextTypesOnMessage";
-import { automodTrigger } from "../helpers";
+import { z } from "zod";
+import { allowTimeout } from "../../../RegExpRunner.js";
+import { getFishFishDomain } from "../../../data/FishFish.js";
+import { getUrlsInString, inputPatternToRegExp, zRegex } from "../../../utils.js";
+import { mergeRegexes } from "../../../utils/mergeRegexes.js";
+import { mergeWordsIntoRegex } from "../../../utils/mergeWordsIntoRegex.js";
+import { getTextMatchPartialSummary } from "../functions/getTextMatchPartialSummary.js";
+import { MatchableTextType, matchMultipleTextTypesOnMessage } from "../functions/matchMultipleTextTypesOnMessage.js";
+import { automodTrigger } from "../helpers.js";
 
 interface MatchResultType {
   type: MatchableTextType;
@@ -21,40 +19,38 @@ const regexCache = new WeakMap<any, RegExp[]>();
 
 const quickLinkCheck = /^https?:\/\//i;
 
-export const MatchLinksTrigger = automodTrigger<MatchResultType>()({
-  configType: t.type({
-    include_domains: tNullable(t.array(t.string)),
-    exclude_domains: tNullable(t.array(t.string)),
-    include_subdomains: t.boolean,
-    include_words: tNullable(t.array(t.string)),
-    exclude_words: tNullable(t.array(t.string)),
-    include_regex: tNullable(t.array(TRegex)),
-    exclude_regex: tNullable(t.array(TRegex)),
-    phisherman: tNullable(
-      t.type({
-        include_suspected: tNullable(t.boolean),
-        include_verified: tNullable(t.boolean),
-      }),
-    ),
-    only_real_links: t.boolean,
-    match_messages: t.boolean,
-    match_embeds: t.boolean,
-    match_visible_names: t.boolean,
-    match_usernames: t.boolean,
-    match_nicknames: t.boolean,
-    match_custom_status: t.boolean,
-  }),
+const configSchema = z.strictObject({
+  include_domains: z.array(z.string().max(255)).max(700).optional(),
+  exclude_domains: z.array(z.string().max(255)).max(700).optional(),
+  include_subdomains: z.boolean().default(true),
+  include_words: z.array(z.string().max(2000)).max(700).optional(),
+  exclude_words: z.array(z.string().max(2000)).max(700).optional(),
+  include_regex: z
+    .array(zRegex(z.string().max(2000)))
+    .max(512)
+    .optional(),
+  exclude_regex: z
+    .array(zRegex(z.string().max(2000)))
+    .max(512)
+    .optional(),
+  phisherman: z
+    .strictObject({
+      include_suspected: z.boolean().optional(),
+      include_verified: z.boolean().optional(),
+    })
+    .optional(),
+  include_malicious: z.boolean().default(false),
+  only_real_links: z.boolean().default(true),
+  match_messages: z.boolean().default(true),
+  match_embeds: z.boolean().default(true),
+  match_visible_names: z.boolean().default(false),
+  match_usernames: z.boolean().default(false),
+  match_nicknames: z.boolean().default(false),
+  match_custom_status: z.boolean().default(false),
+});
 
-  defaultConfig: {
-    include_subdomains: true,
-    match_messages: true,
-    match_embeds: false,
-    match_visible_names: false,
-    match_usernames: false,
-    match_nicknames: false,
-    match_custom_status: false,
-    only_real_links: true,
-  },
+export const MatchLinksTrigger = automodTrigger<MatchResultType>()({
+  configSchema,
 
   async match({ pluginData, context, triggerConfig: trigger }) {
     if (!context.message) {
@@ -77,7 +73,10 @@ export const MatchLinksTrigger = automodTrigger<MatchResultType>()({
 
         if (trigger.exclude_regex) {
           if (!regexCache.has(trigger.exclude_regex)) {
-            const toCache = mergeRegexes(trigger.exclude_regex, "i");
+            const toCache = mergeRegexes(
+              trigger.exclude_regex.map((pattern) => inputPatternToRegExp(pattern)),
+              "i",
+            );
             regexCache.set(trigger.exclude_regex, toCache);
           }
           const regexes = regexCache.get(trigger.exclude_regex)!;
@@ -92,7 +91,10 @@ export const MatchLinksTrigger = automodTrigger<MatchResultType>()({
 
         if (trigger.include_regex) {
           if (!regexCache.has(trigger.include_regex)) {
-            const toCache = mergeRegexes(trigger.include_regex, "i");
+            const toCache = mergeRegexes(
+              trigger.include_regex.map((pattern) => inputPatternToRegExp(pattern)),
+              "i",
+            );
             regexCache.set(trigger.include_regex, toCache);
           }
           const regexes = regexCache.get(trigger.include_regex)!;
@@ -159,22 +161,18 @@ export const MatchLinksTrigger = automodTrigger<MatchResultType>()({
           }
         }
 
-        if (trigger.phisherman) {
-          const phishermanResult = await pluginData.getPlugin(PhishermanPlugin).getDomainInfo(normalizedHostname);
-          if (phishermanResult != null && !phishermanDomainIsSafe(phishermanResult)) {
-            if (
-              (trigger.phisherman.include_suspected && !phishermanResult.verifiedPhish) ||
-              (trigger.phisherman.include_verified && phishermanResult.verifiedPhish)
-            ) {
-              const suspectedVerified = phishermanResult.verifiedPhish ? "verified" : "suspected";
-              return {
-                extra: {
-                  type,
-                  link: link.input,
-                  details: `using Phisherman (${suspectedVerified})`,
-                },
-              };
-            }
+        const includeMalicious =
+          trigger.include_malicious || trigger.phisherman?.include_suspected || trigger.phisherman?.include_verified;
+        if (includeMalicious) {
+          const domainInfo = getFishFishDomain(normalizedHostname);
+          if (domainInfo && domainInfo.category !== "safe") {
+            return {
+              extra: {
+                type,
+                link: link.input,
+                details: `(known ${domainInfo.category} domain)`,
+              },
+            };
           }
         }
       }

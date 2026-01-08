@@ -1,8 +1,7 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { clearUpcomingReminder } from "../../../data/loops/upcomingRemindersLoop";
-import { sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils";
-import { sorter } from "../../../utils";
-import { remindersCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { clearUpcomingReminder } from "../../../data/loops/upcomingRemindersLoop.js";
+import { sorter } from "../../../utils.js";
+import { remindersCmd } from "../types.js";
 
 export const RemindersDeleteCmd = remindersCmd({
   trigger: ["reminders delete", "reminders d"],
@@ -17,7 +16,7 @@ export const RemindersDeleteCmd = remindersCmd({
     reminders.sort(sorter("remind_at"));
 
     if (args.num > reminders.length || args.num <= 0) {
-      sendErrorMessage(pluginData, msg.channel, "Unknown reminder");
+      void pluginData.state.common.sendErrorMessage(msg, "Unknown reminder");
       return;
     }
 
@@ -25,6 +24,6 @@ export const RemindersDeleteCmd = remindersCmd({
     clearUpcomingReminder(toDelete);
     await pluginData.state.reminders.delete(toDelete.id);
 
-    sendSuccessMessage(pluginData, msg.channel, "Reminder deleted");
+    void pluginData.state.common.sendSuccessMessage(msg, "Reminder deleted");
   },
 });

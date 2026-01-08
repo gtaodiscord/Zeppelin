@@ -1,18 +1,19 @@
 import { Snowflake, VoiceChannel } from "discord.js";
-import * as t from "io-ts";
-import { GuildPluginData } from "knub";
-import { canActOn } from "../../../pluginUtils";
-import { TemplateSafeValueContainer, renderTemplate } from "../../../templateFormatter";
-import { resolveMember } from "../../../utils";
-import { ActionError } from "../ActionError";
-import { CustomEventsPluginType, TCustomEvent } from "../types";
+import { GuildPluginData } from "vety";
+import { z } from "zod";
+import { canActOn } from "../../../pluginUtils.js";
+import { TemplateSafeValueContainer, renderTemplate } from "../../../templateFormatter.js";
+import { resolveMember, zBoundedCharacters } from "../../../utils.js";
+import { ActionError } from "../ActionError.js";
+import { catchTemplateError } from "../catchTemplateError.js";
+import { CustomEventsPluginType, TCustomEvent } from "../types.js";
 
-export const MoveToVoiceChannelAction = t.type({
-  type: t.literal("move_to_vc"),
-  target: t.string,
-  channel: t.string,
+export const zMoveToVoiceChannelAction = z.strictObject({
+  type: z.literal("move_to_vc"),
+  target: zBoundedCharacters(0, 100),
+  channel: zBoundedCharacters(0, 100),
 });
-export type TMoveToVoiceChannelAction = t.TypeOf<typeof MoveToVoiceChannelAction>;
+export type TMoveToVoiceChannelAction = z.infer<typeof zMoveToVoiceChannelAction>;
 
 export async function moveToVoiceChannelAction(
   pluginData: GuildPluginData<CustomEventsPluginType>,
@@ -21,7 +22,10 @@ export async function moveToVoiceChannelAction(
   event: TCustomEvent,
   eventData: any,
 ) {
-  const targetId = await renderTemplate(action.target, values, false);
+  const targetId = await catchTemplateError(
+    () => renderTemplate(action.target, values, false),
+    "Invalid target format",
+  );
   const target = await resolveMember(pluginData.client, pluginData.guild, targetId);
   if (!target) throw new ActionError("Unknown target member");
 
@@ -29,7 +33,10 @@ export async function moveToVoiceChannelAction(
     throw new ActionError("Missing permissions");
   }
 
-  const targetChannelId = await renderTemplate(action.channel, values, false);
+  const targetChannelId = await catchTemplateError(
+    () => renderTemplate(action.channel, values, false),
+    "Invalid channel format",
+  );
   const targetChannel = pluginData.guild.channels.cache.get(targetChannelId as Snowflake);
   if (!targetChannel) throw new ActionError("Unknown target channel");
   if (!(targetChannel instanceof VoiceChannel)) throw new ActionError("Target channel is not a voice channel");

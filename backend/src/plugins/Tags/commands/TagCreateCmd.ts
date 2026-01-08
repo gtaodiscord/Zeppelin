@@ -1,7 +1,6 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils";
-import { TemplateParseError, parseTemplate } from "../../../templateFormatter";
-import { tagsCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { TemplateParseError, parseTemplate } from "../../../templateFormatter.js";
+import { tagsCmd } from "../types.js";
 
 export const TagCreateCmd = tagsCmd({
   trigger: "tag",
@@ -17,7 +16,7 @@ export const TagCreateCmd = tagsCmd({
       parseTemplate(args.body);
     } catch (e) {
       if (e instanceof TemplateParseError) {
-        sendErrorMessage(pluginData, msg.channel, `Invalid tag syntax: ${e.message}`);
+        void pluginData.state.common.sendErrorMessage(msg, `Invalid tag syntax: ${e.message}`);
         return;
       } else {
         throw e;
@@ -27,6 +26,6 @@ export const TagCreateCmd = tagsCmd({
     await pluginData.state.tags.createOrUpdate(args.tag, args.body, msg.author.id);
 
     const prefix = pluginData.config.get().prefix;
-    sendSuccessMessage(pluginData, msg.channel, `Tag set! Use it with: \`${prefix}${args.tag}\``);
+    void pluginData.state.common.sendSuccessMessage(msg, `Tag set! Use it with: \`${prefix}${args.tag}\``);
   },
 });

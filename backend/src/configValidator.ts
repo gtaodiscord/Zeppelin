@@ -1,27 +1,21 @@
-import { ConfigValidationError, PluginConfigManager } from "knub";
-import moment from "moment-timezone";
-import { ZeppelinPlugin } from "./plugins/ZeppelinPlugin";
-import { guildPlugins } from "./plugins/availablePlugins";
-import { PartialZeppelinGuildConfigSchema, ZeppelinGuildConfig } from "./types";
-import { StrictValidationError, decodeAndValidateStrict } from "./validatorUtils";
+import { BaseConfig, ConfigValidationError, GuildPluginBlueprint, PluginConfigManager } from "vety";
+import { z, ZodError } from "zod";
+import { availableGuildPlugins } from "./plugins/availablePlugins.js";
+import { zZeppelinGuildConfig } from "./types.js";
+import { formatZodIssue } from "./utils/formatZodIssue.js";
 
-const pluginNameToPlugin = new Map<string, ZeppelinPlugin>();
-for (const plugin of guildPlugins) {
-  pluginNameToPlugin.set(plugin.name, plugin);
+const pluginNameToPlugin = new Map<string, GuildPluginBlueprint<any, any>>();
+for (const pluginInfo of availableGuildPlugins) {
+  pluginNameToPlugin.set(pluginInfo.plugin.name, pluginInfo.plugin);
 }
 
 export async function validateGuildConfig(config: any): Promise<string | null> {
-  const validationResult = decodeAndValidateStrict(PartialZeppelinGuildConfigSchema, config);
-  if (validationResult instanceof StrictValidationError) return validationResult.getErrors();
-
-  const guildConfig = config as ZeppelinGuildConfig;
-
-  if (guildConfig.timezone) {
-    const validTimezones = moment.tz.names();
-    if (!validTimezones.includes(guildConfig.timezone)) {
-      return `Invalid timezone: ${guildConfig.timezone}`;
-    }
+  const validationResult = zZeppelinGuildConfig.safeParse(config);
+  if (!validationResult.success) {
+    return validationResult.error.issues.map(formatZodIssue).join("\n");
   }
+
+  const guildConfig = config as BaseConfig;
 
   if (guildConfig.plugins) {
     for (const [pluginName, pluginOptions] of Object.entries(guildConfig.plugins)) {
@@ -34,14 +28,20 @@ export async function validateGuildConfig(config: any): Promise<string | null> {
       }
 
       const plugin = pluginNameToPlugin.get(pluginName)!;
-      const configManager = new PluginConfigManager(plugin.defaultOptions || { config: {} }, pluginOptions, {
+      const configManager = new PluginConfigManager(pluginOptions, {
+        configSchema: plugin.configSchema,
+        defaultOverrides: plugin.defaultOverrides ?? [],
         levels: {},
-        parser: plugin.configParser,
+        customOverrideCriteriaFunctions: plugin.customOverrideCriteriaFunctions,
       });
+
       try {
         await configManager.init();
       } catch (err) {
-        if (err instanceof ConfigValidationError || err instanceof StrictValidationError) {
+        if (err instanceof ZodError) {
+          return `${pluginName}:\n${z.prettifyError(err)}`;
+        }
+        if (err instanceof ConfigValidationError) {
           return `${pluginName}: ${err.message}`;
         }
 

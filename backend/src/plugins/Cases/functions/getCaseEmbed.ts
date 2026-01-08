@@ -1,20 +1,26 @@
-import { escapeCodeBlock, MessageCreateOptions, MessageEditOptions } from "discord.js";
-import { GuildPluginData } from "knub";
+import {
+  escapeCodeBlock,
+  InteractionEditReplyOptions,
+  InteractionReplyOptions,
+  MessageCreateOptions,
+  MessageEditOptions,
+} from "discord.js";
+import { GuildPluginData } from "vety";
 import moment from "moment-timezone";
-import { CaseTypes } from "../../../data/CaseTypes";
-import { Case } from "../../../data/entities/Case";
-import { chunkMessageLines, emptyEmbedValue, messageLink } from "../../../utils";
-import { TimeAndDatePlugin } from "../../TimeAndDate/TimeAndDatePlugin";
-import { CasesPluginType } from "../types";
-import { getCaseColor } from "./getCaseColor";
-import { resolveCaseId } from "./resolveCaseId";
+import { CaseTypes } from "../../../data/CaseTypes.js";
+import { Case } from "../../../data/entities/Case.js";
+import { chunkMessageLines, emptyEmbedValue, messageLink } from "../../../utils.js";
+import { TimeAndDatePlugin } from "../../TimeAndDate/TimeAndDatePlugin.js";
+import { CasesPluginType } from "../types.js";
+import { getCaseColor } from "./getCaseColor.js";
+import { resolveCaseId } from "./resolveCaseId.js";
 
 export async function getCaseEmbed(
   pluginData: GuildPluginData<CasesPluginType>,
   caseOrCaseId: Case | number,
   requestMemberId?: string,
   noOriginalCaseLink?: boolean,
-): Promise<MessageCreateOptions & MessageEditOptions> {
+): Promise<MessageCreateOptions & MessageEditOptions & InteractionReplyOptions & InteractionEditReplyOptions> {
   const theCase = await pluginData.state.cases.with("notes").find(resolveCaseId(caseOrCaseId));
   if (!theCase) {
     throw new Error("Unknown case");

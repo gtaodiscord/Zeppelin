@@ -1,6 +1,6 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { archiveSearch, displaySearch, SearchType } from "../search";
-import { utilityCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { archiveSearch, displaySearch, SearchType } from "../search.js";
+import { utilityCmd } from "../types.js";
 
 // Separate from SearchCmd to avoid a circular reference from ./search.ts
 export const searchCmdSignature = {
@@ -15,7 +15,7 @@ export const searchCmdSignature = {
   export: ct.switchOption({ def: false, shortcut: "e" }),
   ids: ct.switchOption(),
   regex: ct.switchOption({ def: false, shortcut: "re" }),
-  "status-search": ct.switchOption({ def: false, shortcut: "ss" }),
+  // "status-search": ct.switchOption({ def: false, shortcut: "ss" }),
 };
 
 export const SearchCmd = utilityCmd({

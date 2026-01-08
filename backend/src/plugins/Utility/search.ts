@@ -5,24 +5,32 @@ import {
   GuildMember,
   Message,
   MessageComponentInteraction,
+  OmitPartialGroupDMChannel,
   PermissionsBitField,
   Snowflake,
   User,
 } from "discord.js";
 import escapeStringRegexp from "escape-string-regexp";
-import { ArgsFromSignatureOrArray, GuildPluginData } from "knub";
+import { ArgsFromSignatureOrArray, GuildPluginData } from "vety";
 import moment from "moment-timezone";
-import { RegExpRunner, allowTimeout } from "../../RegExpRunner";
-import { getBaseUrl, sendErrorMessage } from "../../pluginUtils";
-import { MINUTES, multiSorter, renderUserUsername, sorter, trimLines } from "../../utils";
-import { asyncFilter } from "../../utils/async";
-import { hasDiscordPermissions } from "../../utils/hasDiscordPermissions";
-import { InvalidRegexError, inputPatternToRegExp } from "../../validatorUtils";
-import { banSearchSignature } from "./commands/BanSearchCmd";
-import { searchCmdSignature } from "./commands/SearchCmd";
-import { getUserInfoEmbed } from "./functions/getUserInfoEmbed";
-import { refreshMembersIfNeeded } from "./refreshMembers";
-import { UtilityPluginType } from "./types";
+import { RegExpRunner, allowTimeout } from "../../RegExpRunner.js";
+import { getBaseUrl } from "../../pluginUtils.js";
+import {
+  InvalidRegexError,
+  MINUTES,
+  inputPatternToRegExp,
+  multiSorter,
+  renderUsername,
+  sorter,
+  trimLines,
+} from "../../utils.js";
+import { asyncFilter } from "../../utils/async.js";
+import { hasDiscordPermissions } from "../../utils/hasDiscordPermissions.js";
+import { banSearchSignature } from "./commands/BanSearchCmd.js";
+import { searchCmdSignature } from "./commands/SearchCmd.js";
+import { getUserInfoEmbed } from "./functions/getUserInfoEmbed.js";
+import { refreshMembersIfNeeded } from "./refreshMembers.js";
+import { UtilityPluginType } from "./types.js";
 import Timeout = NodeJS.Timeout;
 
 const SEARCH_RESULTS_PER_PAGE = 15;
@@ -66,22 +74,22 @@ export async function displaySearch(
   pluginData: GuildPluginData<UtilityPluginType>,
   args: MemberSearchParams,
   searchType: SearchType.MemberSearch,
-  msg: Message,
+  msg: OmitPartialGroupDMChannel<Message>,
 );
 export async function displaySearch(
   pluginData: GuildPluginData<UtilityPluginType>,
   args: BanSearchParams,
   searchType: SearchType.BanSearch,
-  msg: Message,
+  msg: OmitPartialGroupDMChannel<Message>,
 );
 export async function displaySearch(
   pluginData: GuildPluginData<UtilityPluginType>,
   args: MemberSearchParams | BanSearchParams,
   searchType: SearchType,
-  msg: Message,
+  msg: OmitPartialGroupDMChannel<Message>,
 ) {
   // If we're not exporting, load 1 page of search results at a time and allow the user to switch pages with reactions
-  let originalSearchMsg: Message;
+  let originalSearchMsg: OmitPartialGroupDMChannel<Message>;
   let searching = false;
   let currentPage = args.page || 1;
   let stopCollectionFn: () => void;
@@ -100,7 +108,7 @@ export async function displaySearch(
       searchMsgPromise = originalSearchMsg.edit("Searching...");
     } else {
       searchMsgPromise = msg.channel.send("Searching...");
-      searchMsgPromise.then((m) => (originalSearchMsg = m));
+      searchMsgPromise.then((m) => (originalSearchMsg = m as OmitPartialGroupDMChannel<Message>));
     }
 
     let searchResult;
@@ -115,12 +123,12 @@ export async function displaySearch(
       }
     } catch (e) {
       if (e instanceof SearchError) {
-        sendErrorMessage(pluginData, msg.channel, e.message);
+        void pluginData.state.common.sendErrorMessage(msg, e.message);
         return;
       }
 
       if (e instanceof InvalidRegexError) {
-        sendErrorMessage(pluginData, msg.channel, e.message);
+        void pluginData.state.common.sendErrorMessage(msg, e.message);
         return;
       }
 
@@ -128,7 +136,7 @@ export async function displaySearch(
     }
 
     if (searchResult.totalResults === 0) {
-      sendErrorMessage(pluginData, msg.channel, "No results found");
+      void pluginData.state.common.sendErrorMessage(msg, "No results found");
       return;
     }
 
@@ -233,19 +241,19 @@ export async function archiveSearch(
   pluginData: GuildPluginData<UtilityPluginType>,
   args: MemberSearchParams,
   searchType: SearchType.MemberSearch,
-  msg: Message,
+  msg: OmitPartialGroupDMChannel<Message>,
 );
 export async function archiveSearch(
   pluginData: GuildPluginData<UtilityPluginType>,
   args: BanSearchParams,
   searchType: SearchType.BanSearch,
-  msg: Message,
+  msg: OmitPartialGroupDMChannel<Message>,
 );
 export async function archiveSearch(
   pluginData: GuildPluginData<UtilityPluginType>,
   args: MemberSearchParams | BanSearchParams,
   searchType: SearchType,
-  msg: Message,
+  msg: OmitPartialGroupDMChannel<Message>,
 ) {
   let results;
   try {
@@ -259,12 +267,12 @@ export async function archiveSearch(
     }
   } catch (e) {
     if (e instanceof SearchError) {
-      sendErrorMessage(pluginData, msg.channel, e.message);
+      void pluginData.state.common.sendErrorMessage(msg, e.message);
       return;
     }
 
     if (e instanceof InvalidRegexError) {
-      sendErrorMessage(pluginData, msg.channel, e.message);
+      void pluginData.state.common.sendErrorMessage(msg, e.message);
       return;
     }
 
@@ -272,7 +280,7 @@ export async function archiveSearch(
   }
 
   if (results.totalResults === 0) {
-    sendErrorMessage(pluginData, msg.channel, "No results found");
+    void pluginData.state.common.sendErrorMessage(msg, "No results found");
     return;
   }
 
@@ -381,7 +389,7 @@ async function performMemberSearch(
         return true;
       }
 
-      const fullUsername = renderUserUsername(member.user);
+      const fullUsername = renderUsername(member);
       if (await execRegExp(queryRegex, fullUsername).catch(allowTimeout)) return true;
 
       return false;
@@ -448,7 +456,7 @@ async function performBanSearch(
 
     const execRegExp = getOptimizedRegExpRunner(pluginData, isSafeRegex);
     matchingBans = await asyncFilter(matchingBans, async (user) => {
-      const fullUsername = renderUserUsername(user);
+      const fullUsername = renderUsername(user);
       if (await execRegExp(queryRegex, fullUsername).catch(allowTimeout)) return true;
       return false;
     });
@@ -492,10 +500,10 @@ function formatSearchResultList(members: Array<GuildMember | User>): string {
     const paddedId = member.id.padEnd(longestId, " ");
     let line;
     if (member instanceof GuildMember) {
-      line = `${paddedId} ${renderUserUsername(member.user)}`;
+      line = `${paddedId} ${renderUsername(member)}`;
       if (member.nickname) line += ` (${member.nickname})`;
     } else {
-      line = `${paddedId} ${member.tag}`;
+      line = `${paddedId} ${renderUsername(member)}`;
     }
     return line;
   });

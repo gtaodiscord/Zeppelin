@@ -1,14 +1,15 @@
 import { Guild, Snowflake } from "discord.js";
 import moment from "moment-timezone";
-import { isDefaultSticker } from "src/utils/isDefaultSticker";
-import { Repository, getRepository } from "typeorm";
-import { TemplateSafeValueContainer, renderTemplate } from "../templateFormatter";
-import { renderUsername, trimLines } from "../utils";
-import { decrypt, encrypt } from "../utils/crypt";
-import { channelToTemplateSafeChannel, guildToTemplateSafeGuild } from "../utils/templateSafeObjects";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { ArchiveEntry } from "./entities/ArchiveEntry";
-import { SavedMessage } from "./entities/SavedMessage";
+import { Repository } from "typeorm";
+import { TemplateSafeValueContainer, renderTemplate } from "../templateFormatter.js";
+import { renderUsername, trimLines } from "../utils.js";
+import { decrypt, encrypt } from "../utils/crypt.js";
+import { isDefaultSticker } from "../utils/isDefaultSticker.js";
+import { channelToTemplateSafeChannel, guildToTemplateSafeGuild } from "../utils/templateSafeObjects.js";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { dataSource } from "./dataSource.js";
+import { ArchiveEntry } from "./entities/ArchiveEntry.js";
+import { SavedMessage } from "./entities/SavedMessage.js";
 
 const DEFAULT_EXPIRY_DAYS = 30;
 
@@ -23,7 +24,7 @@ export class GuildArchives extends BaseGuildRepository<ArchiveEntry> {
 
   constructor(guildId) {
     super(guildId);
-    this.archives = getRepository(ArchiveEntry);
+    this.archives = dataSource.getRepository(ArchiveEntry);
   }
 
   protected async _processEntityFromDB(entity: ArchiveEntry | undefined) {
@@ -42,7 +43,7 @@ export class GuildArchives extends BaseGuildRepository<ArchiveEntry> {
     return entity;
   }
 
-  async find(id: string): Promise<ArchiveEntry | undefined> {
+  async find(id: string): Promise<ArchiveEntry | null> {
     const result = await this.archives.findOne({
       where: { id },
       relations: this.getRelations(),

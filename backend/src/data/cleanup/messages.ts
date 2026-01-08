@@ -1,8 +1,8 @@
 import moment from "moment-timezone";
-import { getRepository, In } from "typeorm";
-import { DAYS, DBDateFormat, MINUTES, SECONDS, sleep } from "../../utils";
-import { connection } from "../db";
-import { SavedMessage } from "../entities/SavedMessage";
+import { In } from "typeorm";
+import { DAYS, DBDateFormat, MINUTES, SECONDS, sleep } from "../../utils.js";
+import { dataSource } from "../dataSource.js";
+import { SavedMessage } from "../entities/SavedMessage.js";
 
 /**
  * How long message edits, deletions, etc. will include the original message content.
@@ -16,7 +16,7 @@ const CLEAN_PER_LOOP = 100;
 export async function cleanupMessages(): Promise<number> {
   let cleaned = 0;
 
-  const messagesRepository = getRepository(SavedMessage);
+  const messagesRepository = dataSource.getRepository(SavedMessage);
 
   const deletedAtThreshold = moment.utc().subtract(DELETED_MESSAGE_RETENTION_PERIOD, "ms").format(DBDateFormat);
   const postedAtThreshold = moment.utc().subtract(RETENTION_PERIOD, "ms").format(DBDateFormat);
@@ -27,7 +27,7 @@ export async function cleanupMessages(): Promise<number> {
   // when a message was being inserted at the same time
   let ids: string[];
   do {
-    const deletedMessageRows = await connection.query(
+    const deletedMessageRows = await dataSource.query(
       `
       SELECT id
       FROM messages
@@ -40,7 +40,7 @@ export async function cleanupMessages(): Promise<number> {
       [deletedAtThreshold],
     );
 
-    const oldPostedRows = await connection.query(
+    const oldPostedRows = await dataSource.query(
       `
       SELECT id
       FROM messages
@@ -53,7 +53,7 @@ export async function cleanupMessages(): Promise<number> {
       [postedAtThreshold],
     );
 
-    const oldBotPostedRows = await connection.query(
+    const oldBotPostedRows = await dataSource.query(
       `
       SELECT id
       FROM messages

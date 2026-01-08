@@ -1,14 +1,14 @@
 import { AuditLogEvent, User } from "discord.js";
-import { CaseTypes } from "../../../data/CaseTypes";
-import { Case } from "../../../data/entities/Case";
-import { logger } from "../../../logger";
-import { UnknownUser, resolveUser } from "../../../utils";
-import { findMatchingAuditLogEntry } from "../../../utils/findMatchingAuditLogEntry";
-import { CasesPlugin } from "../../Cases/CasesPlugin";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { clearIgnoredEvents } from "../functions/clearIgnoredEvents";
-import { isEventIgnored } from "../functions/isEventIgnored";
-import { IgnoredEventType, modActionsEvt } from "../types";
+import { CaseTypes } from "../../../data/CaseTypes.js";
+import { Case } from "../../../data/entities/Case.js";
+import { logger } from "../../../logger.js";
+import { UnknownUser, resolveUser } from "../../../utils.js";
+import { findMatchingAuditLogEntry } from "../../../utils/findMatchingAuditLogEntry.js";
+import { CasesPlugin } from "../../Cases/CasesPlugin.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { clearIgnoredEvents } from "../functions/clearIgnoredEvents.js";
+import { isEventIgnored } from "../functions/isEventIgnored.js";
+import { IgnoredEventType, modActionsEvt } from "../types.js";
 
 /**
  * Create a KICK case automatically when a user is kicked manually.
@@ -36,7 +36,7 @@ export const CreateKickCaseOnManualKickEvt = modActionsEvt({
           `Tried to create duplicate case for audit log entry ${kickAuditLogEntry.id}, existing case id ${createdCase.id}`,
         );
       } else {
-        mod = await resolveUser(pluginData.client, kickAuditLogEntry.executor!.id);
+        mod = await resolveUser(pluginData.client, kickAuditLogEntry.executor!.id, "ModActions:CreateKickCaseOnManualKickEvt");
 
         const config = mod instanceof UnknownUser ? pluginData.config.get() : await pluginData.config.getForUser(mod);
 

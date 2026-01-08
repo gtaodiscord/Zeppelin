@@ -1,5 +1,5 @@
 import seedrandom from "seedrandom";
-import { get, has } from "./utils";
+import { get, has } from "./utils.js";
 
 const TEMPLATE_CACHE_SIZE = 200;
 const templateCache: Map<string, ParsedTemplate> = new Map();
@@ -353,6 +353,7 @@ const baseValues = {
     return [...args].join("");
   },
   concatArr(arr, separator = "") {
+    if (!Array.isArray(arr)) return "";
     return arr.join(separator);
   },
   eq(...args) {
@@ -418,8 +419,11 @@ const baseValues = {
     return Math.round(randValue * (to - from) + from);
   },
   round(arg, decimals = 0) {
-    if (isNaN(arg)) return 0;
-    return decimals === 0 ? Math.round(arg) : arg.toFixed(decimals);
+    if (typeof arg !== "number") {
+      arg = parseFloat(arg);
+    }
+    if (Number.isNaN(arg)) return 0;
+    return decimals === 0 ? Math.round(arg) : arg.toFixed(Math.max(0, Math.min(decimals, 100)));
   },
   add(...args) {
     return args.reduce((result, arg) => {
@@ -477,7 +481,7 @@ export async function renderTemplate(
 
     // If our template cache is full, delete the first item
     if (templateCache.size >= TEMPLATE_CACHE_SIZE) {
-      const firstKey = templateCache.keys().next().value;
+      const firstKey = templateCache.keys().next().value!;
       templateCache.delete(firstKey);
     }
 

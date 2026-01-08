@@ -1,13 +1,14 @@
-import { getRepository, Repository } from "typeorm";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { StatValue } from "./entities/StatValue";
+import { Repository } from "typeorm";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { dataSource } from "./dataSource.js";
+import { StatValue } from "./entities/StatValue.js";
 
 export class GuildStats extends BaseGuildRepository {
   private stats: Repository<StatValue>;
 
   constructor(guildId) {
     super(guildId);
-    this.stats = getRepository(StatValue);
+    this.stats = dataSource.getRepository(StatValue);
   }
 
   async saveValue(source: string, key: string, value: number): Promise<void> {

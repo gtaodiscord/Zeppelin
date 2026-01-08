@@ -1,18 +1,19 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginMessageCommand } from "knub";
-import { GuildLogs } from "../../data/GuildLogs";
+import { BasePluginType, guildPluginMessageCommand, pluginUtils } from "vety";
+import { z } from "zod";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
 
-export const ConfigSchema = t.type({
-  can_assign: t.boolean,
-  can_mass_assign: t.boolean,
-  assignable_roles: t.array(t.string),
+export const zRolesConfig = z.strictObject({
+  can_assign: z.boolean().default(false),
+  can_mass_assign: z.boolean().default(false),
+  assignable_roles: z.array(z.string()).max(100).default([]),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface RolesPluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zRolesConfig;
   state: {
     logs: GuildLogs;
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
   };
 }
 

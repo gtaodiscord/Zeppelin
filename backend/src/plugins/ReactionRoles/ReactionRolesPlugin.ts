@@ -1,30 +1,22 @@
-import { PluginOptions } from "knub";
-import { Queue } from "../../Queue";
-import { GuildReactionRoles } from "../../data/GuildReactionRoles";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { LogsPlugin } from "../Logs/LogsPlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { ClearReactionRolesCmd } from "./commands/ClearReactionRolesCmd";
-import { InitReactionRolesCmd } from "./commands/InitReactionRolesCmd";
-import { RefreshReactionRolesCmd } from "./commands/RefreshReactionRolesCmd";
-import { AddReactionRoleEvt } from "./events/AddReactionRoleEvt";
-import { MessageDeletedEvt } from "./events/MessageDeletedEvt";
-import { ConfigSchema, ReactionRolesPluginType } from "./types";
+import { guildPlugin } from "vety";
+import { Queue } from "../../Queue.js";
+import { GuildReactionRoles } from "../../data/GuildReactionRoles.js";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { LogsPlugin } from "../Logs/LogsPlugin.js";
+import { ClearReactionRolesCmd } from "./commands/ClearReactionRolesCmd.js";
+import { InitReactionRolesCmd } from "./commands/InitReactionRolesCmd.js";
+import { RefreshReactionRolesCmd } from "./commands/RefreshReactionRolesCmd.js";
+import { AddReactionRoleEvt } from "./events/AddReactionRoleEvt.js";
+import { MessageDeletedEvt } from "./events/MessageDeletedEvt.js";
+import { ReactionRolesPluginType, zReactionRolesConfig } from "./types.js";
 
-const MIN_AUTO_REFRESH = 1000 * 60 * 15; // 15min minimum, let's not abuse the API
+export const ReactionRolesPlugin = guildPlugin<ReactionRolesPluginType>()({
+  name: "reaction_roles",
 
-const defaultOptions: PluginOptions<ReactionRolesPluginType> = {
-  config: {
-    auto_refresh_interval: MIN_AUTO_REFRESH,
-    remove_user_reactions: true,
-
-    can_manage: false,
-
-    button_groups: null,
-  },
-
-  overrides: [
+  dependencies: () => [LogsPlugin],
+  configSchema: zReactionRolesConfig,
+  defaultOverrides: [
     {
       level: ">=100",
       config: {
@@ -32,20 +24,6 @@ const defaultOptions: PluginOptions<ReactionRolesPluginType> = {
       },
     },
   ],
-};
-
-export const ReactionRolesPlugin = zeppelinGuildPlugin<ReactionRolesPluginType>()({
-  name: "reaction_roles",
-  showInDocs: true,
-  info: {
-    prettyName: "Reaction roles",
-    legacy: "Consider using the [Role buttons](/docs/plugins/role_buttons) plugin instead.",
-    configSchema: ConfigSchema,
-  },
-
-  dependencies: () => [LogsPlugin],
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
 
   // prettier-ignore
   messageCommands: [
@@ -69,6 +47,10 @@ export const ReactionRolesPlugin = zeppelinGuildPlugin<ReactionRolesPluginType>(
     state.roleChangeQueue = new Queue();
     state.pendingRoleChanges = new Map();
     state.pendingRefreshes = new Set();
+  },
+
+  beforeStart(pluginData) {
+    pluginData.state.common = pluginData.getPlugin(CommonPlugin);
   },
 
   afterLoad(pluginData) {

@@ -1,7 +1,7 @@
 import { User, escapeBold, type Snowflake } from "discord.js";
-import * as t from "io-ts";
-import { tNullable } from "../../../utils";
-import { automodTrigger } from "../helpers";
+import { z } from "zod";
+import { renderUsername } from "../../../utils.js";
+import { automodTrigger } from "../helpers.js";
 
 interface ThreadUnarchiveResult {
   matchedThreadId: Snowflake;
@@ -11,12 +11,12 @@ interface ThreadUnarchiveResult {
   matchedThreadOwner: User | undefined;
 }
 
-export const ThreadUnarchiveTrigger = automodTrigger<ThreadUnarchiveResult>()({
-  configType: t.type({
-    locked: tNullable(t.boolean),
-  }),
+const configSchema = z.strictObject({
+  locked: z.boolean().optional(),
+});
 
-  defaultConfig: {},
+export const ThreadUnarchiveTrigger = automodTrigger<ThreadUnarchiveResult>()({
+  configSchema,
 
   async match({ context, triggerConfig }) {
     if (!context.threadChange?.unarchived) {
@@ -48,7 +48,7 @@ export const ThreadUnarchiveTrigger = automodTrigger<ThreadUnarchiveResult>()({
     const parentName = matchResult.extra.matchedThreadParentName;
     const base = `Thread **#${threadName}** (\`${threadId}\`) has been unarchived in the **#${parentName}** (\`${parentId}\`) channel`;
     if (threadOwner) {
-      return `${base} by **${escapeBold(threadOwner.tag)}** (\`${threadOwner.id}\`)`;
+      return `${base} by **${escapeBold(renderUsername(threadOwner))}** (\`${threadOwner.id}\`)`;
     }
     return base;
   },

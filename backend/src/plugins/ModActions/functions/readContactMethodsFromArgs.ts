@@ -1,9 +1,9 @@
 import { GuildTextBasedChannel } from "discord.js";
-import { disableUserNotificationStrings, UserNotificationMethod } from "../../../utils";
+import { disableUserNotificationStrings, UserNotificationMethod } from "../../../utils.js";
 
 export function readContactMethodsFromArgs(args: {
-  notify?: string;
-  "notify-channel"?: GuildTextBasedChannel;
+  notify?: string | null;
+  "notify-channel"?: GuildTextBasedChannel | null;
 }): null | UserNotificationMethod[] {
   if (args.notify) {
     if (args.notify === "dm") {

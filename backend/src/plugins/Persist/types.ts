@@ -1,18 +1,17 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginEventListener } from "knub";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildPersistedData } from "../../data/GuildPersistedData";
+import { BasePluginType, guildPluginEventListener } from "vety";
+import { z } from "zod";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildPersistedData } from "../../data/GuildPersistedData.js";
+import { zSnowflake } from "../../utils.js";
 
-export const ConfigSchema = t.type({
-  persisted_roles: t.array(t.string),
-  persist_nicknames: t.boolean,
-  persist_voice_mutes: t.boolean, // Deprecated, here to not break old configs
+export const zPersistConfig = z.strictObject({
+  persisted_roles: z.array(zSnowflake).default([]),
+  persist_nicknames: z.boolean().default(false),
+  persist_voice_mutes: z.boolean().default(false),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface PersistPluginType extends BasePluginType {
-  config: TConfigSchema;
-
+  configSchema: typeof zPersistConfig;
   state: {
     persistedData: GuildPersistedData;
     logs: GuildLogs;

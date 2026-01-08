@@ -1,17 +1,18 @@
-import * as t from "io-ts";
-import { GuildPluginData } from "knub";
-import { canActOn } from "../../../pluginUtils";
-import { renderTemplate, TemplateSafeValueContainer } from "../../../templateFormatter";
-import { resolveMember } from "../../../utils";
-import { ActionError } from "../ActionError";
-import { CustomEventsPluginType, TCustomEvent } from "../types";
+import { GuildPluginData } from "vety";
+import { z } from "zod";
+import { canActOn } from "../../../pluginUtils.js";
+import { renderTemplate, TemplateSafeValueContainer } from "../../../templateFormatter.js";
+import { resolveMember, zBoundedCharacters, zSnowflake } from "../../../utils.js";
+import { ActionError } from "../ActionError.js";
+import { catchTemplateError } from "../catchTemplateError.js";
+import { CustomEventsPluginType, TCustomEvent } from "../types.js";
 
-export const AddRoleAction = t.type({
-  type: t.literal("add_role"),
-  target: t.string,
-  role: t.union([t.string, t.array(t.string)]),
+export const zAddRoleAction = z.strictObject({
+  type: z.literal("add_role"),
+  target: zBoundedCharacters(0, 100),
+  role: z.union([zSnowflake, z.array(zSnowflake)]),
 });
-export type TAddRoleAction = t.TypeOf<typeof AddRoleAction>;
+export type TAddRoleAction = z.infer<typeof zAddRoleAction>;
 
 export async function addRoleAction(
   pluginData: GuildPluginData<CustomEventsPluginType>,
@@ -20,7 +21,10 @@ export async function addRoleAction(
   event: TCustomEvent,
   eventData: any,
 ) {
-  const targetId = await renderTemplate(action.target, values, false);
+  const targetId = await catchTemplateError(
+    () => renderTemplate(action.target, values, false),
+    "Invalid target format",
+  );
   const target = await resolveMember(pluginData.client, pluginData.guild, targetId);
   if (!target) throw new ActionError(`Unknown target member: ${targetId}`);
 

@@ -1,10 +1,10 @@
-import { getRepository, Repository } from "typeorm";
-import { isAPI } from "../globals";
-import { HOURS, SECONDS } from "../utils";
-import { BaseRepository } from "./BaseRepository";
-import { cleanupConfigs } from "./cleanup/configs";
-import { connection } from "./db";
-import { Config } from "./entities/Config";
+import { Repository } from "typeorm";
+import { isAPI } from "../globals.js";
+import { HOURS, SECONDS } from "../utils.js";
+import { BaseRepository } from "./BaseRepository.js";
+import { cleanupConfigs } from "./cleanup/configs.js";
+import { dataSource } from "./dataSource.js";
+import { Config } from "./entities/Config.js";
 
 const CLEANUP_INTERVAL = 1 * HOURS;
 
@@ -24,7 +24,13 @@ export class Configs extends BaseRepository {
 
   constructor() {
     super();
-    this.configs = getRepository(Config);
+    this.configs = dataSource.getRepository(Config);
+  }
+
+  getActive() {
+    return this.configs.find({
+      where: { is_active: true },
+    });
   }
 
   getActiveByKey(key) {
@@ -37,7 +43,7 @@ export class Configs extends BaseRepository {
   }
 
   async getHighestId(): Promise<number> {
-    const rows = await connection.query("SELECT MAX(id) AS highest_id FROM configs");
+    const rows = await dataSource.query("SELECT MAX(id) AS highest_id FROM configs");
     return (rows.length && rows[0].highest_id) || 0;
   }
 
@@ -62,7 +68,7 @@ export class Configs extends BaseRepository {
   }
 
   async saveNewRevision(key, config, editedBy) {
-    return connection.transaction(async (entityManager) => {
+    return dataSource.transaction(async (entityManager) => {
       const repo = entityManager.getRepository(Config);
       // Mark all old revisions inactive
       await repo.update({ key }, { is_active: false });

@@ -1,13 +1,12 @@
 import { Snowflake, TextChannel } from "discord.js";
-import { GuildPluginData } from "knub";
-import { erisAllowedMentionsToDjsMentionOptions } from "src/utils/erisAllowedMentionsToDjsMentionOptions";
-import { SavedMessage } from "../../../data/entities/SavedMessage";
-import { convertDelayStringToMS, resolveMember, tStrictMessageContent } from "../../../utils";
-import { messageIsEmpty } from "../../../utils/messageIsEmpty";
-import { validate } from "../../../validatorUtils";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { TagsPluginType } from "../types";
-import { matchAndRenderTagFromString } from "./matchAndRenderTagFromString";
+import { GuildPluginData } from "vety";
+import { SavedMessage } from "../../../data/entities/SavedMessage.js";
+import { convertDelayStringToMS, resolveMember, zStrictMessageContent } from "../../../utils.js";
+import { erisAllowedMentionsToDjsMentionOptions } from "../../../utils/erisAllowedMentionsToDjsMentionOptions.js";
+import { messageIsEmpty } from "../../../utils/messageIsEmpty.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { TagsPluginType } from "../types.js";
+import { matchAndRenderTagFromString } from "./matchAndRenderTagFromString.js";
 
 export async function onMessageCreate(pluginData: GuildPluginData<TagsPluginType>, msg: SavedMessage) {
   if (msg.is_bot) return;
@@ -85,10 +84,10 @@ export async function onMessageCreate(pluginData: GuildPluginData<TagsPluginType
     pluginData.cooldowns.setCooldown(cd[0], cd[1]);
   }
 
-  const validationError = await validate(tStrictMessageContent, tagResult.renderedContent);
-  if (validationError) {
+  const validated = zStrictMessageContent.safeParse(tagResult.renderedContent);
+  if (!validated.success) {
     pluginData.getPlugin(LogsPlugin).logBotAlert({
-      body: `Rendering tag ${tagResult.tagName} resulted in an invalid message: ${validationError.message}`,
+      body: `Rendering tag ${tagResult.tagName} resulted in an invalid message: ${validated.error.message}`,
     });
     return;
   }

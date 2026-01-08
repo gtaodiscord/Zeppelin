@@ -1,20 +1,20 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand } from "knub";
-import { GuildPingableRoles } from "../../data/GuildPingableRoles";
-import { PingableRole } from "../../data/entities/PingableRole";
+import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand, pluginUtils } from "vety";
+import { z } from "zod";
+import { GuildPingableRoles } from "../../data/GuildPingableRoles.js";
+import { PingableRole } from "../../data/entities/PingableRole.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
 
-export const ConfigSchema = t.type({
-  can_manage: t.boolean,
+export const zPingableRolesConfig = z.strictObject({
+  can_manage: z.boolean().default(false),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface PingableRolesPluginType extends BasePluginType {
-  config: TConfigSchema;
-
+  configSchema: typeof zPingableRolesConfig;
   state: {
     pingableRoles: GuildPingableRoles;
     cache: Map<string, PingableRole[]>;
     timeouts: Map<string, any>;
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
   };
 }
 

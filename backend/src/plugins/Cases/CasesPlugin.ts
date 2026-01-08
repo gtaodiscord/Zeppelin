@@ -1,84 +1,42 @@
-import { CaseTypes } from "../../data/CaseTypes";
-import { Case } from "../../data/entities/Case";
-import { GuildArchives } from "../../data/GuildArchives";
-import { GuildCases } from "../../data/GuildCases";
-import { GuildLogs } from "../../data/GuildLogs";
-import { makeIoTsConfigParser, mapToPublicFn } from "../../pluginUtils";
-import { trimPluginDescription } from "../../utils";
-import { InternalPosterPlugin } from "../InternalPoster/InternalPosterPlugin";
-import { TimeAndDatePlugin } from "../TimeAndDate/TimeAndDatePlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { createCase } from "./functions/createCase";
-import { createCaseNote } from "./functions/createCaseNote";
-import { getCaseEmbed } from "./functions/getCaseEmbed";
-import { getCaseSummary } from "./functions/getCaseSummary";
-import { getCaseTypeAmountForUserId } from "./functions/getCaseTypeAmountForUserId";
-import { getRecentCasesByMod } from "./functions/getRecentCasesByMod";
-import { getTotalCasesByMod } from "./functions/getTotalCasesByMod";
-import { postCaseToCaseLogChannel } from "./functions/postToCaseLogChannel";
-import { CaseArgs, CaseNoteArgs, CasesPluginType, ConfigSchema } from "./types";
+import { guildPlugin } from "vety";
+import { GuildArchives } from "../../data/GuildArchives.js";
+import { GuildCases } from "../../data/GuildCases.js";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { makePublicFn } from "../../pluginUtils.js";
+import { InternalPosterPlugin } from "../InternalPoster/InternalPosterPlugin.js";
+import { TimeAndDatePlugin } from "../TimeAndDate/TimeAndDatePlugin.js";
+import { createCase } from "./functions/createCase.js";
+import { createCaseNote } from "./functions/createCaseNote.js";
+import { getCaseEmbed } from "./functions/getCaseEmbed.js";
+import { getCaseSummary } from "./functions/getCaseSummary.js";
+import { getCaseTypeAmountForUserId } from "./functions/getCaseTypeAmountForUserId.js";
+import { getRecentCasesByMod } from "./functions/getRecentCasesByMod.js";
+import { getTotalCasesByMod } from "./functions/getTotalCasesByMod.js";
+import { postCaseToCaseLogChannel } from "./functions/postToCaseLogChannel.js";
+import { CasesPluginType, zCasesConfig } from "./types.js";
 
 // The `any` cast here is to prevent TypeScript from locking up from the circular dependency
 function getLogsPlugin(): Promise<any> {
   return import("../Logs/LogsPlugin.js") as Promise<any>;
 }
 
-const defaultOptions = {
-  config: {
-    log_automatic_actions: true,
-    case_log_channel: null,
-    show_relative_times: true,
-    relative_time_cutoff: "7d",
-    case_colors: null,
-    case_icons: null,
-  },
-};
-
-export const CasesPlugin = zeppelinGuildPlugin<CasesPluginType>()({
+export const CasesPlugin = guildPlugin<CasesPluginType>()({
   name: "cases",
-  showInDocs: true,
-  info: {
-    prettyName: "Cases",
-    description: trimPluginDescription(`
-      This plugin contains basic configuration for cases created by other plugins
-    `),
-    configSchema: ConfigSchema,
-  },
 
   dependencies: async () => [TimeAndDatePlugin, InternalPosterPlugin, (await getLogsPlugin()).LogsPlugin],
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
+  configSchema: zCasesConfig,
 
-  public: {
-    createCase(pluginData) {
-      return (args: CaseArgs) => {
-        return createCase(pluginData, args);
-      };
-    },
-
-    createCaseNote(pluginData) {
-      return (args: CaseNoteArgs) => {
-        return createCaseNote(pluginData, args);
-      };
-    },
-
-    postCaseToCaseLogChannel(pluginData) {
-      return (caseOrCaseId: Case | number) => {
-        return postCaseToCaseLogChannel(pluginData, caseOrCaseId);
-      };
-    },
-
-    getCaseTypeAmountForUserId(pluginData) {
-      return (userID: string, type: CaseTypes) => {
-        return getCaseTypeAmountForUserId(pluginData, userID, type);
-      };
-    },
-
-    getTotalCasesByMod: mapToPublicFn(getTotalCasesByMod),
-    getRecentCasesByMod: mapToPublicFn(getRecentCasesByMod),
-
-    getCaseEmbed: mapToPublicFn(getCaseEmbed),
-    getCaseSummary: mapToPublicFn(getCaseSummary),
+  public(pluginData) {
+    return {
+      createCase: makePublicFn(pluginData, createCase),
+      createCaseNote: makePublicFn(pluginData, createCaseNote),
+      postCaseToCaseLogChannel: makePublicFn(pluginData, postCaseToCaseLogChannel),
+      getCaseTypeAmountForUserId: makePublicFn(pluginData, getCaseTypeAmountForUserId),
+      getTotalCasesByMod: makePublicFn(pluginData, getTotalCasesByMod),
+      getRecentCasesByMod: makePublicFn(pluginData, getRecentCasesByMod),
+      getCaseEmbed: makePublicFn(pluginData, getCaseEmbed),
+      getCaseSummary: makePublicFn(pluginData, getCaseSummary),
+    };
   },
 
   afterLoad(pluginData) {

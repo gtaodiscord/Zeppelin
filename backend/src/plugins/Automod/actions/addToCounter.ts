@@ -1,15 +1,16 @@
-import * as t from "io-ts";
-import { CountersPlugin } from "../../Counters/CountersPlugin";
-import { LogsPlugin } from "../../Logs/LogsPlugin";
-import { automodAction } from "../helpers";
+import { z } from "zod";
+import { zBoundedCharacters } from "../../../utils.js";
+import { CountersPlugin } from "../../Counters/CountersPlugin.js";
+import { LogsPlugin } from "../../Logs/LogsPlugin.js";
+import { automodAction } from "../helpers.js";
+
+const configSchema = z.object({
+  counter: zBoundedCharacters(0, 100),
+  amount: z.number(),
+});
 
 export const AddToCounterAction = automodAction({
-  configType: t.type({
-    counter: t.string,
-    amount: t.number,
-  }),
-
-  defaultConfig: {},
+  configSchema,
 
   async apply({ pluginData, contexts, actionConfig, ruleName }) {
     const countersPlugin = pluginData.getPlugin(CountersPlugin);

@@ -1,20 +1,21 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand } from "knub";
-import { Queue } from "../../Queue";
-import { GuildNicknameHistory } from "../../data/GuildNicknameHistory";
-import { UsernameHistory } from "../../data/UsernameHistory";
+import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand, pluginUtils } from "vety";
+import { z } from "zod";
+import { Queue } from "../../Queue.js";
+import { GuildNicknameHistory } from "../../data/GuildNicknameHistory.js";
+import { UsernameHistory } from "../../data/UsernameHistory.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
 
-export const ConfigSchema = t.type({
-  can_view: t.boolean,
+export const zNameHistoryConfig = z.strictObject({
+  can_view: z.boolean().default(false),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface NameHistoryPluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zNameHistoryConfig;
   state: {
     nicknameHistory: GuildNicknameHistory;
     usernameHistory: UsernameHistory;
     updateQueue: Queue;
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
   };
 }
 

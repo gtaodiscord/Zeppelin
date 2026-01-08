@@ -1,7 +1,7 @@
 import { Message } from "discord.js";
-import { noop, resolveMember, sleep } from "../../../utils";
-import { reactionRolesEvt } from "../types";
-import { addMemberPendingRoleChange } from "../util/addMemberPendingRoleChange";
+import { noop, resolveMember, sleep } from "../../../utils.js";
+import { reactionRolesEvt } from "../types.js";
+import { addMemberPendingRoleChange } from "../util/addMemberPendingRoleChange.js";
 
 const CLEAR_ROLES_EMOJI = "❌";
 
@@ -16,7 +16,7 @@ export const AddReactionRoleEvt = reactionRolesEvt({
 
     if (userId === pluginData.client.user!.id) {
       // Don't act on own reactions
-      // FIXME: This may not be needed? Knub currently requires the *member* to be found for the user to be resolved as well. Need to look into it more.
+      // FIXME: This may not be needed? Vety currently requires the *member* to be found for the user to be resolved as well. Need to look into it more.
       return;
     }
 

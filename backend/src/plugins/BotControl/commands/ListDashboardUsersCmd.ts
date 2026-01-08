@@ -1,7 +1,6 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils";
-import { renderUserUsername, resolveUser } from "../../../utils";
-import { botControlCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { renderUsername, resolveUser } from "../../../utils.js";
+import { botControlCmd } from "../types.js";
 
 export const ListDashboardUsersCmd = botControlCmd({
   trigger: ["list_dashboard_users"],
@@ -14,27 +13,25 @@ export const ListDashboardUsersCmd = botControlCmd({
   async run({ pluginData, message: msg, args }) {
     const guild = await pluginData.state.allowedGuilds.find(args.guildId);
     if (!guild) {
-      sendErrorMessage(pluginData, msg.channel, "Server is not using Zeppelin");
+      void msg.channel.send("Server is not using Zeppelin");
       return;
     }
 
     const dashboardUsers = await pluginData.state.apiPermissionAssignments.getByGuildId(guild.id);
     const users = await Promise.all(
       dashboardUsers.map(async (perm) => ({
-        user: await resolveUser(pluginData.client, perm.target_id),
+        user: await resolveUser(pluginData.client, perm.target_id, "BotControl:ListDashboardUsersCmd"),
         permission: perm,
       })),
     );
     const userNameList = users.map(
       ({ user, permission }) =>
-        `<@!${user.id}> (**${renderUserUsername(user)}**, \`${user.id}\`): ${permission.permissions.join(", ")}`,
+        `<@!${user.id}> (**${renderUsername(user)}**, \`${user.id}\`): ${permission.permissions.join(", ")}`,
     );
 
-    sendSuccessMessage(
-      pluginData,
-      msg.channel,
-      `The following users have dashboard access for **${guild.name}**:\n\n${userNameList.join("\n")}`,
-      {},
-    );
+    msg.channel.send({
+      content: `The following users have dashboard access for **${guild.name}**:\n\n${userNameList.join("\n")}`,
+      allowedMentions: {},
+    });
   },
 });

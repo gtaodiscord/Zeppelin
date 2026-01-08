@@ -1,17 +1,17 @@
 import { Snowflake } from "discord.js";
-import * as t from "io-ts";
-import { GuildPluginData } from "knub";
-import { TemplateSafeValueContainer } from "../../../templateFormatter";
-import { convertDelayStringToMS, noop, tDelayString } from "../../../utils";
-import { ActionError } from "../ActionError";
-import { CustomEventsPluginType, TCustomEvent } from "../types";
+import { GuildPluginData } from "vety";
+import { z } from "zod";
+import { TemplateSafeValueContainer } from "../../../templateFormatter.js";
+import { convertDelayStringToMS, noop, zBoundedCharacters, zDelayString } from "../../../utils.js";
+import { ActionError } from "../ActionError.js";
+import { CustomEventsPluginType, TCustomEvent } from "../types.js";
 
-export const MakeRoleMentionableAction = t.type({
-  type: t.literal("make_role_mentionable"),
-  role: t.string,
-  timeout: tDelayString,
+export const zMakeRoleMentionableAction = z.strictObject({
+  type: z.literal("make_role_mentionable"),
+  role: zBoundedCharacters(0, 100),
+  timeout: zDelayString,
 });
-export type TMakeRoleMentionableAction = t.TypeOf<typeof MakeRoleMentionableAction>;
+export type TMakeRoleMentionableAction = z.infer<typeof zMakeRoleMentionableAction>;
 
 export async function makeRoleMentionableAction(
   pluginData: GuildPluginData<CustomEventsPluginType>,

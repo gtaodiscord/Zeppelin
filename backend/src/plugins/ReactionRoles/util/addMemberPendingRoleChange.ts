@@ -1,9 +1,9 @@
 import { Snowflake } from "discord.js";
-import { GuildPluginData } from "knub";
-import { logger } from "../../../logger";
-import { renderUserUsername, resolveMember } from "../../../utils";
-import { memberRolesLock } from "../../../utils/lockNameHelpers";
-import { PendingMemberRoleChanges, ReactionRolesPluginType, RoleChangeMode } from "../types";
+import { GuildPluginData } from "vety";
+import { logger } from "../../../logger.js";
+import { renderUsername, resolveMember } from "../../../utils.js";
+import { memberRolesLock } from "../../../utils/lockNameHelpers.js";
+import { PendingMemberRoleChanges, ReactionRolesPluginType, RoleChangeMode } from "../types.js";
 
 const ROLE_CHANGE_BATCH_DEBOUNCE_TIME = 1500;
 
@@ -33,9 +33,7 @@ export async function addMemberPendingRoleChange(
           try {
             await member.roles.set(Array.from(newRoleIds.values()), "Reaction roles");
           } catch (e) {
-            logger.warn(
-              `Failed to apply role changes to ${renderUserUsername(member.user)} (${member.id}): ${e.message}`,
-            );
+            logger.warn(`Failed to apply role changes to ${renderUsername(member)} (${member.id}): ${e.message}`);
           }
         }
         lock.unlock();

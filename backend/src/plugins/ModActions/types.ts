@@ -1,51 +1,73 @@
-import { GuildTextBasedChannel } from "discord.js";
+import { ChatInputCommandInteraction, Message } from "discord.js";
 import { EventEmitter } from "events";
-import * as t from "io-ts";
-import { BasePluginType, guildPluginEventListener, guildPluginMessageCommand } from "knub";
-import { Queue } from "../../Queue";
-import { GuildCases } from "../../data/GuildCases";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildMutes } from "../../data/GuildMutes";
-import { GuildTempbans } from "../../data/GuildTempbans";
-import { Case } from "../../data/entities/Case";
-import { UserNotificationMethod, UserNotificationResult, tNullable } from "../../utils";
-import { CaseArgs } from "../Cases/types";
+import {
+  BasePluginType,
+  guildPluginEventListener,
+  guildPluginMessageCommand,
+  guildPluginSlashCommand,
+  guildPluginSlashGroup,
+  pluginUtils,
+} from "vety";
+import { z } from "zod";
+import { Queue } from "../../Queue.js";
+import { GuildCases } from "../../data/GuildCases.js";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildMutes } from "../../data/GuildMutes.js";
+import { GuildTempbans } from "../../data/GuildTempbans.js";
+import { Case } from "../../data/entities/Case.js";
+import { UserNotificationMethod, UserNotificationResult } from "../../utils.js";
+import { CaseArgs } from "../Cases/types.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
 
-export const ConfigSchema = t.type({
-  dm_on_warn: t.boolean,
-  dm_on_kick: t.boolean,
-  dm_on_ban: t.boolean,
-  message_on_warn: t.boolean,
-  message_on_kick: t.boolean,
-  message_on_ban: t.boolean,
-  message_channel: tNullable(t.string),
-  warn_message: tNullable(t.string),
-  kick_message: tNullable(t.string),
-  ban_message: tNullable(t.string),
-  tempban_message: tNullable(t.string),
-  alert_on_rejoin: t.boolean,
-  alert_channel: tNullable(t.string),
-  warn_notify_enabled: t.boolean,
-  warn_notify_threshold: t.number,
-  warn_notify_message: t.string,
-  ban_delete_message_days: t.number,
-  can_note: t.boolean,
-  can_warn: t.boolean,
-  can_mute: t.boolean,
-  can_kick: t.boolean,
-  can_ban: t.boolean,
-  can_unban: t.boolean,
-  can_view: t.boolean,
-  can_addcase: t.boolean,
-  can_massunban: t.boolean,
-  can_massban: t.boolean,
-  can_massmute: t.boolean,
-  can_hidecase: t.boolean,
-  can_deletecase: t.boolean,
-  can_act_as_other: t.boolean,
-  create_cases_for_manual_actions: t.boolean,
+export type AttachmentLinkReactionType = "none" | "warn" | "restrict" | null;
+
+export const zModActionsConfig = z.strictObject({
+  dm_on_warn: z.boolean().default(true),
+  dm_on_kick: z.boolean().default(false),
+  dm_on_ban: z.boolean().default(false),
+  message_on_warn: z.boolean().default(false),
+  message_on_kick: z.boolean().default(false),
+  message_on_ban: z.boolean().default(false),
+  message_channel: z.nullable(z.string()).default(null),
+  warn_message: z.nullable(z.string()).default("You have received a warning on the {guildName} server: {reason}"),
+  kick_message: z
+    .nullable(z.string())
+    .default("You have been kicked from the {guildName} server. Reason given: {reason}"),
+  ban_message: z
+    .nullable(z.string())
+    .default("You have been banned from the {guildName} server. Reason given: {reason}"),
+  tempban_message: z
+    .nullable(z.string())
+    .default("You have been banned from the {guildName} server for {banTime}. Reason given: {reason}"),
+  alert_on_rejoin: z.boolean().default(false),
+  alert_channel: z.nullable(z.string()).default(null),
+  warn_notify_enabled: z.boolean().default(false),
+  warn_notify_threshold: z.number().default(5),
+  warn_notify_message: z
+    .string()
+    .default(
+      "The user already has **{priorWarnings}** warnings!\n Please check their prior cases and assess whether or not to warn anyways.\n Proceed with the warning?",
+    ),
+  ban_delete_message_days: z.number().default(1),
+  attachment_link_reaction: z
+    .nullable(z.union([z.literal("none"), z.literal("warn"), z.literal("restrict")]))
+    .default("warn"),
+  can_note: z.boolean().default(false),
+  can_warn: z.boolean().default(false),
+  can_mute: z.boolean().default(false),
+  can_kick: z.boolean().default(false),
+  can_ban: z.boolean().default(false),
+  can_unban: z.boolean().default(false),
+  can_view: z.boolean().default(false),
+  can_addcase: z.boolean().default(false),
+  can_massunban: z.boolean().default(false),
+  can_massban: z.boolean().default(false),
+  can_massmute: z.boolean().default(false),
+  can_hidecase: z.boolean().default(false),
+  can_deletecase: z.boolean().default(false),
+  can_act_as_other: z.boolean().default(false),
+  create_cases_for_manual_actions: z.boolean().default(true),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface ModActionsEvents {
   note: (userId: string, reason?: string) => void;
@@ -62,7 +84,7 @@ export interface ModActionsEventEmitter extends EventEmitter {
 }
 
 export interface ModActionsPluginType extends BasePluginType {
-  config: TConfigSchema;
+  configSchema: typeof zModActionsConfig;
   state: {
     mutes: GuildMutes;
     cases: GuildCases;
@@ -75,6 +97,8 @@ export interface ModActionsPluginType extends BasePluginType {
     massbanQueue: Queue;
 
     events: ModActionsEventEmitter;
+
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
   };
 }
 
@@ -127,7 +151,7 @@ export type WarnMemberNotifyRetryCallback = () => boolean | Promise<boolean>;
 export interface WarnOptions {
   caseArgs?: Partial<CaseArgs> | null;
   contactMethods?: UserNotificationMethod[] | null;
-  retryPromptChannel?: GuildTextBasedChannel | null;
+  retryPromptContext?: Message | ChatInputCommandInteraction | null;
   isAutomodAction?: boolean;
 }
 
@@ -147,5 +171,7 @@ export interface BanOptions {
 
 export type ModActionType = "note" | "warn" | "mute" | "unmute" | "kick" | "ban" | "unban";
 
-export const modActionsCmd = guildPluginMessageCommand<ModActionsPluginType>();
+export const modActionsMsgCmd = guildPluginMessageCommand<ModActionsPluginType>();
+export const modActionsSlashGroup = guildPluginSlashGroup<ModActionsPluginType>();
+export const modActionsSlashCmd = guildPluginSlashCommand<ModActionsPluginType>();
 export const modActionsEvt = guildPluginEventListener<ModActionsPluginType>();

@@ -1,13 +1,14 @@
-import { getRepository, Repository } from "typeorm";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { AutoReaction } from "./entities/AutoReaction";
+import { Repository } from "typeorm";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { dataSource } from "./dataSource.js";
+import { AutoReaction } from "./entities/AutoReaction.js";
 
 export class GuildAutoReactions extends BaseGuildRepository {
   private autoReactions: Repository<AutoReaction>;
 
   constructor(guildId) {
     super(guildId);
-    this.autoReactions = getRepository(AutoReaction);
+    this.autoReactions = dataSource.getRepository(AutoReaction);
   }
 
   async all(): Promise<AutoReaction[]> {
@@ -18,7 +19,7 @@ export class GuildAutoReactions extends BaseGuildRepository {
     });
   }
 
-  async getForChannel(channelId: string): Promise<AutoReaction | undefined> {
+  async getForChannel(channelId: string): Promise<AutoReaction | null> {
     return this.autoReactions.findOne({
       where: {
         guild_id: this.guildId,

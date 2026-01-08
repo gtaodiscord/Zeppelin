@@ -1,18 +1,18 @@
-import * as t from "io-ts";
-import { BasePluginType, guildPluginMessageCommand } from "knub";
-import { GuildReminders } from "../../data/GuildReminders";
+import { BasePluginType, guildPluginMessageCommand, pluginUtils } from "vety";
+import { z } from "zod";
+import { GuildReminders } from "../../data/GuildReminders.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
 
-export const ConfigSchema = t.type({
-  can_use: t.boolean,
+export const zRemindersConfig = z.strictObject({
+  can_use: z.boolean().default(false),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface RemindersPluginType extends BasePluginType {
-  config: TConfigSchema;
-
+  configSchema: typeof zRemindersConfig;
   state: {
     reminders: GuildReminders;
     tries: Map<number, number>;
+    common: pluginUtils.PluginPublicInterface<typeof CommonPlugin>;
 
     unregisterGuildEventListener: () => void;
 

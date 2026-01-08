@@ -1,10 +1,10 @@
-import * as t from "io-ts";
-import { automodTrigger } from "../helpers";
+import { z } from "zod";
+import { automodTrigger } from "../helpers.js";
+
+const configSchema = z.strictObject({});
 
 export const MemberLeaveTrigger = automodTrigger<unknown>()({
-  configType: t.type({}),
-
-  defaultConfig: {},
+  configSchema,
 
   async match({ context }) {
     if (!context.joined || !context.member) {

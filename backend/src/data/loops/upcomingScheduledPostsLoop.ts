@@ -1,10 +1,10 @@
 // tslint:disable:no-console
 
 import moment from "moment-timezone";
-import { lazyMemoize, MINUTES } from "../../utils";
-import { ScheduledPost } from "../entities/ScheduledPost";
-import { emitGuildEvent, hasGuildEventListener } from "../GuildEvents";
-import { ScheduledPosts } from "../ScheduledPosts";
+import { lazyMemoize, MINUTES } from "../../utils.js";
+import { ScheduledPost } from "../entities/ScheduledPost.js";
+import { emitGuildEvent, hasGuildEventListener } from "../GuildEvents.js";
+import { ScheduledPosts } from "../ScheduledPosts.js";
 import Timeout = NodeJS.Timeout;
 
 const LOOP_INTERVAL = 15 * MINUTES;
@@ -53,12 +53,12 @@ export function registerUpcomingScheduledPost(post: ScheduledPost) {
     return;
   }
 
-  console.log("[SCHEDULED POSTS LOOP] Registering new upcoming scheduled post");
   const remaining = Math.max(0, moment.utc(post.post_at).diff(moment.utc()));
   if (remaining > LOOP_INTERVAL) {
     return;
   }
 
+  console.log("[SCHEDULED POSTS LOOP] Registering new upcoming scheduled post");
   timeouts.set(
     post.id,
     setTimeout(() => broadcastScheduledPost(post), remaining),
@@ -66,8 +66,8 @@ export function registerUpcomingScheduledPost(post: ScheduledPost) {
 }
 
 export function clearUpcomingScheduledPost(post: ScheduledPost) {
-  console.log("[SCHEDULED POSTS LOOP] Clearing upcoming scheduled post");
   if (timeouts.has(post.id)) {
+    console.log("[SCHEDULED POSTS LOOP] Clearing upcoming scheduled post");
     clearTimeout(timeouts.get(post.id)!);
   }
 }

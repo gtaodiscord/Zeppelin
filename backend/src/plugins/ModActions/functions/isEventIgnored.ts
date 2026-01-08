@@ -1,5 +1,5 @@
-import { GuildPluginData } from "knub";
-import { IgnoredEventType, ModActionsPluginType } from "../types";
+import { GuildPluginData } from "vety";
+import { IgnoredEventType, ModActionsPluginType } from "../types.js";
 
 export function isEventIgnored(
   pluginData: GuildPluginData<ModActionsPluginType>,

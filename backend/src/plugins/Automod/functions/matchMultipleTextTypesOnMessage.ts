@@ -1,9 +1,9 @@
 import { ActivityType, Embed } from "discord.js";
-import { GuildPluginData } from "knub";
-import { SavedMessage } from "../../../data/entities/SavedMessage";
-import { renderUsername, resolveMember } from "../../../utils";
+import { GuildPluginData } from "vety";
+import { SavedMessage } from "../../../data/entities/SavedMessage.js";
+import { renderUsername, resolveMember } from "../../../utils.js";
 import { DeepMutable } from "../../../utils/typeUtils.js";
-import { AutomodPluginType } from "../types";
+import { AutomodPluginType } from "../types.js";
 
 type TextTriggerWithMultipleMatchTypes = {
   match_messages: boolean;
@@ -42,7 +42,7 @@ export async function* matchMultipleTextTypesOnMessage(
   }
 
   if (trigger.match_visible_names) {
-    yield ["visiblename", member.nickname || msg.data.author.username];
+    yield ["visiblename", member.displayName || msg.data.author.username];
   }
 
   if (trigger.match_usernames) {

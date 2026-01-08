@@ -1,7 +1,6 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes";
-import { sendSuccessMessage } from "../../../pluginUtils";
-import { saveMessagesToDB } from "../saveMessagesToDB";
-import { messageSaverCmd } from "../types";
+import { commandTypeHelpers as ct } from "../../../commandTypes.js";
+import { saveMessagesToDB } from "../saveMessagesToDB.js";
+import { messageSaverCmd } from "../types.js";
 
 export const SavePinsToDBCmd = messageSaverCmd({
   trigger: "save_pins_to_db",
@@ -19,13 +18,12 @@ export const SavePinsToDBCmd = messageSaverCmd({
     const { savedCount, failed } = await saveMessagesToDB(pluginData, args.channel, [...pins.keys()]);
 
     if (failed.length) {
-      sendSuccessMessage(
-        pluginData,
-        msg.channel,
+      void pluginData.state.common.sendSuccessMessage(
+        msg,
         `Saved ${savedCount} messages. The following messages could not be saved: ${failed.join(", ")}`,
       );
     } else {
-      sendSuccessMessage(pluginData, msg.channel, `Saved ${savedCount} messages!`);
+      void pluginData.state.common.sendSuccessMessage(msg, `Saved ${savedCount} messages!`);
     }
   },
 });

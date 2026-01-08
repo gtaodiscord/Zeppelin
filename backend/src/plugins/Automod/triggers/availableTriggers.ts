@@ -1,39 +1,39 @@
-import * as t from "io-ts";
-import { AutomodTriggerBlueprint } from "../helpers";
-import { AntiraidLevelTrigger } from "./antiraidLevel";
-import { AnyMessageTrigger } from "./anyMessage";
-import { AttachmentSpamTrigger } from "./attachmentSpam";
-import { BanTrigger } from "./ban";
-import { CharacterSpamTrigger } from "./characterSpam";
-import { CounterTrigger } from "./counterTrigger";
-import { EmojiSpamTrigger } from "./emojiSpam";
-import { KickTrigger } from "./kick";
-import { LineSpamTrigger } from "./lineSpam";
-import { LinkSpamTrigger } from "./linkSpam";
-import { MatchAttachmentTypeTrigger } from "./matchAttachmentType";
-import { MatchInvitesTrigger } from "./matchInvites";
-import { MatchLinksTrigger } from "./matchLinks";
-import { MatchMimeTypeTrigger } from "./matchMimeType";
-import { MatchRegexTrigger } from "./matchRegex";
-import { MatchWordsTrigger } from "./matchWords";
-import { MemberJoinTrigger } from "./memberJoin";
-import { MemberJoinSpamTrigger } from "./memberJoinSpam";
-import { MemberLeaveTrigger } from "./memberLeave";
-import { MentionSpamTrigger } from "./mentionSpam";
-import { MessageSpamTrigger } from "./messageSpam";
-import { MuteTrigger } from "./mute";
-import { NoteTrigger } from "./note";
-import { RoleAddedTrigger } from "./roleAdded";
-import { RoleRemovedTrigger } from "./roleRemoved";
-import { StickerSpamTrigger } from "./stickerSpam";
-import { ThreadArchiveTrigger } from "./threadArchive";
-import { ThreadCreateTrigger } from "./threadCreate";
-import { ThreadCreateSpamTrigger } from "./threadCreateSpam";
-import { ThreadDeleteTrigger } from "./threadDelete";
-import { ThreadUnarchiveTrigger } from "./threadUnarchive";
-import { UnbanTrigger } from "./unban";
-import { UnmuteTrigger } from "./unmute";
-import { WarnTrigger } from "./warn";
+import { AutomodTriggerBlueprint } from "../helpers.js";
+import { AntiraidLevelTrigger } from "./antiraidLevel.js";
+import { AnyMessageTrigger } from "./anyMessage.js";
+import { AttachmentSpamTrigger } from "./attachmentSpam.js";
+import { BanTrigger } from "./ban.js";
+import { CharacterSpamTrigger } from "./characterSpam.js";
+import { CounterTrigger } from "./counterTrigger.js";
+import { EmojiSpamTrigger } from "./emojiSpam.js";
+import { HasAttachmentsTrigger } from "./hasAttachments.js";
+import { KickTrigger } from "./kick.js";
+import { LineSpamTrigger } from "./lineSpam.js";
+import { LinkSpamTrigger } from "./linkSpam.js";
+import { MatchAttachmentTypeTrigger } from "./matchAttachmentType.js";
+import { MatchInvitesTrigger } from "./matchInvites.js";
+import { MatchLinksTrigger } from "./matchLinks.js";
+import { MatchMimeTypeTrigger } from "./matchMimeType.js";
+import { MatchRegexTrigger } from "./matchRegex.js";
+import { MatchWordsTrigger } from "./matchWords.js";
+import { MemberJoinTrigger } from "./memberJoin.js";
+import { MemberJoinSpamTrigger } from "./memberJoinSpam.js";
+import { MemberLeaveTrigger } from "./memberLeave.js";
+import { MentionSpamTrigger } from "./mentionSpam.js";
+import { MessageSpamTrigger } from "./messageSpam.js";
+import { MuteTrigger } from "./mute.js";
+import { NoteTrigger } from "./note.js";
+import { RoleAddedTrigger } from "./roleAdded.js";
+import { RoleRemovedTrigger } from "./roleRemoved.js";
+import { StickerSpamTrigger } from "./stickerSpam.js";
+import { ThreadArchiveTrigger } from "./threadArchive.js";
+import { ThreadCreateTrigger } from "./threadCreate.js";
+import { ThreadCreateSpamTrigger } from "./threadCreateSpam.js";
+import { ThreadDeleteTrigger } from "./threadDelete.js";
+import { ThreadUnarchiveTrigger } from "./threadUnarchive.js";
+import { UnbanTrigger } from "./unban.js";
+import { UnmuteTrigger } from "./unmute.js";
+import { WarnTrigger } from "./warn.js";
 
 export const availableTriggers: Record<string, AutomodTriggerBlueprint<any, any>> = {
   any_message: AnyMessageTrigger,
@@ -42,9 +42,11 @@ export const availableTriggers: Record<string, AutomodTriggerBlueprint<any, any>
   match_regex: MatchRegexTrigger,
   match_invites: MatchInvitesTrigger,
   match_links: MatchLinksTrigger,
+  has_attachments: HasAttachmentsTrigger,
   match_attachment_type: MatchAttachmentTypeTrigger,
   match_mime_type: MatchMimeTypeTrigger,
   member_join: MemberJoinTrigger,
+  member_leave: MemberLeaveTrigger,
   role_added: RoleAddedTrigger,
   role_removed: RoleRemovedTrigger,
 
@@ -76,46 +78,3 @@ export const availableTriggers: Record<string, AutomodTriggerBlueprint<any, any>
   thread_archive: ThreadArchiveTrigger,
   thread_unarchive: ThreadUnarchiveTrigger,
 };
-
-export const AvailableTriggers = t.type({
-  any_message: AnyMessageTrigger.configType,
-
-  match_words: MatchWordsTrigger.configType,
-  match_regex: MatchRegexTrigger.configType,
-  match_invites: MatchInvitesTrigger.configType,
-  match_links: MatchLinksTrigger.configType,
-  match_attachment_type: MatchAttachmentTypeTrigger.configType,
-  match_mime_type: MatchMimeTypeTrigger.configType,
-  member_join: MemberJoinTrigger.configType,
-  member_leave: MemberLeaveTrigger.configType,
-  role_added: RoleAddedTrigger.configType,
-  role_removed: RoleRemovedTrigger.configType,
-
-  message_spam: MessageSpamTrigger.configType,
-  mention_spam: MentionSpamTrigger.configType,
-  link_spam: LinkSpamTrigger.configType,
-  attachment_spam: AttachmentSpamTrigger.configType,
-  emoji_spam: EmojiSpamTrigger.configType,
-  line_spam: LineSpamTrigger.configType,
-  character_spam: CharacterSpamTrigger.configType,
-  member_join_spam: MemberJoinSpamTrigger.configType,
-  sticker_spam: StickerSpamTrigger.configType,
-  thread_create_spam: ThreadCreateSpamTrigger.configType,
-
-  counter_trigger: CounterTrigger.configType,
-
-  note: NoteTrigger.configType,
-  warn: WarnTrigger.configType,
-  mute: MuteTrigger.configType,
-  unmute: UnmuteTrigger.configType,
-  kick: KickTrigger.configType,
-  ban: BanTrigger.configType,
-  unban: UnbanTrigger.configType,
-
-  antiraid_level: AntiraidLevelTrigger.configType,
-
-  thread_create: ThreadCreateTrigger.configType,
-  thread_delete: ThreadDeleteTrigger.configType,
-  thread_archive: ThreadArchiveTrigger.configType,
-  thread_unarchive: ThreadUnarchiveTrigger.configType,
-});

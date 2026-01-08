@@ -1,11 +1,11 @@
-import { getRepository, In, InsertResult, Repository } from "typeorm";
-import { Queue } from "../Queue";
-import { chunkArray } from "../utils";
-import { BaseGuildRepository } from "./BaseGuildRepository";
-import { CaseTypes } from "./CaseTypes";
-import { connection } from "./db";
-import { Case } from "./entities/Case";
-import { CaseNote } from "./entities/CaseNote";
+import { FindOptionsWhere, In, InsertResult, Repository } from "typeorm";
+import { Queue } from "../Queue.js";
+import { chunkArray } from "../utils.js";
+import { BaseGuildRepository } from "./BaseGuildRepository.js";
+import { CaseTypes } from "./CaseTypes.js";
+import { dataSource } from "./dataSource.js";
+import { Case } from "./entities/Case.js";
+import { CaseNote } from "./entities/CaseNote.js";
 
 export class GuildCases extends BaseGuildRepository {
   private cases: Repository<Case>;
@@ -15,8 +15,8 @@ export class GuildCases extends BaseGuildRepository {
 
   constructor(guildId) {
     super(guildId);
-    this.cases = getRepository(Case);
-    this.caseNotes = getRepository(CaseNote);
+    this.cases = dataSource.getRepository(Case);
+    this.caseNotes = dataSource.getRepository(CaseNote);
     this.createQueue = new Queue();
   }
 
@@ -30,7 +30,7 @@ export class GuildCases extends BaseGuildRepository {
     });
   }
 
-  async find(id: number): Promise<Case | undefined> {
+  async find(id: number): Promise<Case | null> {
     return this.cases.findOne({
       relations: this.getRelations(),
       where: {
@@ -40,7 +40,7 @@ export class GuildCases extends BaseGuildRepository {
     });
   }
 
-  async findByCaseNumber(caseNumber: number): Promise<Case | undefined> {
+  async findByCaseNumber(caseNumber: number): Promise<Case | null> {
     return this.cases.findOne({
       relations: this.getRelations(),
       where: {
@@ -50,7 +50,7 @@ export class GuildCases extends BaseGuildRepository {
     });
   }
 
-  async findLatestByModId(modId: string): Promise<Case | undefined> {
+  async findLatestByModId(modId: string): Promise<Case | null> {
     return this.cases.findOne({
       relations: this.getRelations(),
       where: {
@@ -63,7 +63,7 @@ export class GuildCases extends BaseGuildRepository {
     });
   }
 
-  async findByAuditLogId(auditLogId: string): Promise<Case | undefined> {
+  async findByAuditLogId(auditLogId: string): Promise<Case | null> {
     return this.cases.findOne({
       relations: this.getRelations(),
       where: {
@@ -73,34 +73,69 @@ export class GuildCases extends BaseGuildRepository {
     });
   }
 
-  async getByUserId(userId: string): Promise<Case[]> {
+  async getByUserId(
+    userId: string,
+    filters: Omit<FindOptionsWhere<Case>, "guild_id" | "user_id"> = {},
+  ): Promise<Case[]> {
+    return this.cases.find({
+      relations: this.getRelations(),
+      where: {
+        guild_id: this.guildId,
+        user_id: userId,
+        ...filters,
+      },
+    });
+  }
+
+  async getRecentByUserId(userId: string, count: number, skip = 0): Promise<Case[]> {
     return this.cases.find({
       relations: this.getRelations(),
       where: {
         guild_id: this.guildId,
         user_id: userId,
       },
+      skip,
+      take: count,
+      order: {
+        case_number: "DESC",
+      },
     });
   }
 
-  async getTotalCasesByModId(modId: string): Promise<number> {
+  async getTotalCasesByModId(
+    modId: string,
+    filters: Omit<FindOptionsWhere<Case>, "guild_id" | "mod_id" | "is_hidden"> = {},
+  ): Promise<number> {
     return this.cases.count({
       where: {
         guild_id: this.guildId,
         mod_id: modId,
-        is_hidden: 0,
+        is_hidden: false,
+        ...filters,
       },
     });
   }
 
-  async getRecentByModId(modId: string, count: number, skip = 0): Promise<Case[]> {
+  async getRecentByModId(
+    modId: string,
+    count: number,
+    skip = 0,
+    filters: Omit<FindOptionsWhere<Case>, "guild_id" | "mod_id"> = {},
+  ): Promise<Case[]> {
+    const where: FindOptionsWhere<Case> = {
+      guild_id: this.guildId,
+      mod_id: modId,
+      is_hidden: false,
+      ...filters,
+    };
+
+    if (where.is_hidden === true) {
+      delete where.is_hidden;
+    }
+
     return this.cases.find({
       relations: this.getRelations(),
-      where: {
-        guild_id: this.guildId,
-        mod_id: modId,
-        is_hidden: 0,
-      },
+      where,
       skip,
       take: count,
       order: {
@@ -181,7 +216,7 @@ export class GuildCases extends BaseGuildRepository {
   }
 
   async softDelete(id: number, deletedById: string, deletedByName: string, deletedByText: string) {
-    return connection.transaction(async (entityManager) => {
+    return dataSource.transaction(async (entityManager) => {
       const cases = entityManager.getRepository(Case);
       const caseNotes = entityManager.getRepository(CaseNote);
 

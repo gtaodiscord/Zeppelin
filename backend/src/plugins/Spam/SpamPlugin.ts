@@ -1,31 +1,20 @@
-import { PluginOptions } from "knub";
-import { GuildArchives } from "../../data/GuildArchives";
-import { GuildLogs } from "../../data/GuildLogs";
-import { GuildMutes } from "../../data/GuildMutes";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { trimPluginDescription } from "../../utils";
-import { LogsPlugin } from "../Logs/LogsPlugin";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { SpamVoiceStateUpdateEvt } from "./events/SpamVoiceEvt";
-import { ConfigSchema, SpamPluginType } from "./types";
-import { clearOldRecentActions } from "./util/clearOldRecentActions";
-import { onMessageCreate } from "./util/onMessageCreate";
+import { guildPlugin } from "vety";
+import { GuildArchives } from "../../data/GuildArchives.js";
+import { GuildLogs } from "../../data/GuildLogs.js";
+import { GuildMutes } from "../../data/GuildMutes.js";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { LogsPlugin } from "../Logs/LogsPlugin.js";
+import { SpamVoiceStateUpdateEvt } from "./events/SpamVoiceEvt.js";
+import { SpamPluginType, zSpamConfig } from "./types.js";
+import { clearOldRecentActions } from "./util/clearOldRecentActions.js";
+import { onMessageCreate } from "./util/onMessageCreate.js";
 
-const defaultOptions: PluginOptions<SpamPluginType> = {
-  config: {
-    max_censor: null,
-    max_messages: null,
-    max_mentions: null,
-    max_links: null,
-    max_attachments: null,
-    max_emojis: null,
-    max_newlines: null,
-    max_duplicates: null,
-    max_characters: null,
-    max_voice_moves: null,
-  },
-  overrides: [
+export const SpamPlugin = guildPlugin<SpamPluginType>()({
+  name: "spam",
+
+  dependencies: () => [LogsPlugin],
+  configSchema: zSpamConfig,
+  defaultOverrides: [
     {
       level: ">=50",
       config: {
@@ -41,24 +30,6 @@ const defaultOptions: PluginOptions<SpamPluginType> = {
       },
     },
   ],
-};
-
-export const SpamPlugin = zeppelinGuildPlugin<SpamPluginType>()({
-  name: "spam",
-  showInDocs: true,
-  info: {
-    prettyName: "Spam protection",
-    description: trimPluginDescription(`
-      Basic spam detection and auto-muting.
-      For more advanced spam filtering, check out the Automod plugin!
-    `),
-    legacy: true,
-    configSchema: ConfigSchema,
-  },
-
-  dependencies: () => [LogsPlugin],
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
 
   // prettier-ignore
   events: [

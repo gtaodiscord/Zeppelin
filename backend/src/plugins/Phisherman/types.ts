@@ -1,16 +1,12 @@
-import * as t from "io-ts";
-import { BasePluginType } from "knub";
-import { tNullable } from "../../utils";
+import { BasePluginType } from "vety";
+import { z } from "zod";
 
-export const ConfigSchema = t.type({
-  api_key: tNullable(t.string),
+export const zPhishermanConfig = z.strictObject({
+  api_key: z.string().max(255).nullable().default(null),
 });
-export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
 
 export interface PhishermanPluginType extends BasePluginType {
-  config: TConfigSchema;
-
-  state: {
-    validApiKey: string | null;
-  };
+  configSchema: typeof zPhishermanConfig;
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  state: {};
 }

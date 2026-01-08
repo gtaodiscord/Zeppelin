@@ -1,24 +1,22 @@
-import * as t from "io-ts";
-import { GuildMemberCache } from "../../data/GuildMemberCache";
-import { makeIoTsConfigParser, mapToPublicFn } from "../../pluginUtils";
-import { SECONDS } from "../../utils";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { cancelDeletionOnMemberJoin } from "./events/cancelDeletionOnMemberJoin";
-import { removeMemberCacheOnMemberLeave } from "./events/removeMemberCacheOnMemberLeave";
-import { updateMemberCacheOnMemberUpdate } from "./events/updateMemberCacheOnMemberUpdate";
-import { updateMemberCacheOnMessage } from "./events/updateMemberCacheOnMessage";
-import { updateMemberCacheOnRoleChange } from "./events/updateMemberCacheOnRoleChange";
-import { updateMemberCacheOnVoiceStateUpdate } from "./events/updateMemberCacheOnVoiceStateUpdate";
-import { getCachedMemberData } from "./functions/getCachedMemberData";
-import { GuildMemberCachePluginType } from "./types";
+import { guildPlugin } from "vety";
+import { GuildMemberCache } from "../../data/GuildMemberCache.js";
+import { makePublicFn } from "../../pluginUtils.js";
+import { SECONDS } from "../../utils.js";
+import { cancelDeletionOnMemberJoin } from "./events/cancelDeletionOnMemberJoin.js";
+import { removeMemberCacheOnMemberLeave } from "./events/removeMemberCacheOnMemberLeave.js";
+import { updateMemberCacheOnMemberUpdate } from "./events/updateMemberCacheOnMemberUpdate.js";
+import { updateMemberCacheOnMessage } from "./events/updateMemberCacheOnMessage.js";
+import { updateMemberCacheOnRoleChange } from "./events/updateMemberCacheOnRoleChange.js";
+import { updateMemberCacheOnVoiceStateUpdate } from "./events/updateMemberCacheOnVoiceStateUpdate.js";
+import { getCachedMemberData } from "./functions/getCachedMemberData.js";
+import { GuildMemberCachePluginType, zGuildMemberCacheConfig } from "./types.js";
 
 const PENDING_SAVE_INTERVAL = 30 * SECONDS;
 
-export const GuildMemberCachePlugin = zeppelinGuildPlugin<GuildMemberCachePluginType>()({
+export const GuildMemberCachePlugin = guildPlugin<GuildMemberCachePluginType>()({
   name: "guild_member_cache",
-  showInDocs: false,
 
-  configParser: makeIoTsConfigParser(t.type({})),
+  configSchema: zGuildMemberCacheConfig,
 
   events: [
     updateMemberCacheOnMemberUpdate,
@@ -29,8 +27,10 @@ export const GuildMemberCachePlugin = zeppelinGuildPlugin<GuildMemberCachePlugin
     cancelDeletionOnMemberJoin,
   ],
 
-  public: {
-    getCachedMemberData: mapToPublicFn(getCachedMemberData),
+  public(pluginData) {
+    return {
+      getCachedMemberData: makePublicFn(pluginData, getCachedMemberData),
+    };
   },
 
   beforeLoad(pluginData) {

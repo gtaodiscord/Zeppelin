@@ -1,17 +1,21 @@
-import { PluginOptions } from "knub";
-import { GuildSavedMessages } from "../../data/GuildSavedMessages";
-import { makeIoTsConfigParser } from "../../pluginUtils";
-import { zeppelinGuildPlugin } from "../ZeppelinPluginBlueprint";
-import { SaveMessagesToDBCmd } from "./commands/SaveMessagesToDB";
-import { SavePinsToDBCmd } from "./commands/SavePinsToDB";
-import { MessageCreateEvt, MessageDeleteBulkEvt, MessageDeleteEvt, MessageUpdateEvt } from "./events/SaveMessagesEvts";
-import { ConfigSchema, MessageSaverPluginType } from "./types";
+import { guildPlugin } from "vety";
+import { GuildSavedMessages } from "../../data/GuildSavedMessages.js";
+import { CommonPlugin } from "../Common/CommonPlugin.js";
+import { SaveMessagesToDBCmd } from "./commands/SaveMessagesToDB.js";
+import { SavePinsToDBCmd } from "./commands/SavePinsToDB.js";
+import {
+  MessageCreateEvt,
+  MessageDeleteBulkEvt,
+  MessageDeleteEvt,
+  MessageUpdateEvt,
+} from "./events/SaveMessagesEvts.js";
+import { MessageSaverPluginType, zMessageSaverConfig } from "./types.js";
 
-const defaultOptions: PluginOptions<MessageSaverPluginType> = {
-  config: {
-    can_manage: false,
-  },
-  overrides: [
+export const MessageSaverPlugin = guildPlugin<MessageSaverPluginType>()({
+  name: "message_saver",
+
+  configSchema: zMessageSaverConfig,
+  defaultOverrides: [
     {
       level: ">=100",
       config: {
@@ -19,14 +23,6 @@ const defaultOptions: PluginOptions<MessageSaverPluginType> = {
       },
     },
   ],
-};
-
-export const MessageSaverPlugin = zeppelinGuildPlugin<MessageSaverPluginType>()({
-  name: "message_saver",
-  showInDocs: false,
-
-  configParser: makeIoTsConfigParser(ConfigSchema),
-  defaultOptions,
 
   // prettier-ignore
   messageCommands: [
@@ -45,5 +41,9 @@ export const MessageSaverPlugin = zeppelinGuildPlugin<MessageSaverPluginType>()(
   beforeLoad(pluginData) {
     const { state, guild } = pluginData;
     state.savedMessages = GuildSavedMessages.getGuildInstance(guild.id);
+  },
+
+  beforeStart(pluginData) {
+    pluginData.state.common = pluginData.getPlugin(CommonPlugin);
   },
 });

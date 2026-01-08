@@ -1,4 +1,4 @@
-import { ApiPermissions, hasPermission, TPermissionHierarchy } from "@shared/apiPermissions";
+import { ApiPermissions, hasPermission, TPermissionHierarchy } from "@zeppelinbot/shared/apiPermissions.js";
 
 export type TPermissionHierarchyState = {
   locked: boolean;
