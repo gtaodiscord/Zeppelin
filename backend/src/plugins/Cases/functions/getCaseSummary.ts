@@ -8,7 +8,7 @@ import { caseAbbreviations } from "../caseAbbreviations.js";
 import { CasesPluginType } from "../types.js";
 import { getCaseIcon } from "./getCaseIcon.js";
 
-const CASE_SUMMARY_REASON_MAX_LENGTH = 300;
+const CASE_SUMMARY_REASON_MAX_LENGTH = 128;
 const INCLUDE_MORE_NOTES_THRESHOLD = 20;
 const UPDATE_STR = "**[Update]**";
 
