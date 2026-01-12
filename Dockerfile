@@ -12,13 +12,13 @@ RUN npm install -g pnpm@10.19.0
 USER node
 
 # Install dependencies before copying over any other files
-COPY --chown=node:node package.json pnpm-workspace.yaml pnpm-lock.yaml /zeppelin
+COPY --chown=node:node package.json pnpm-workspace.yaml pnpm-lock.yaml /zeppelin/
 RUN mkdir /zeppelin/backend
-COPY --chown=node:node backend/package.json /zeppelin/backend
+COPY --chown=node:node backend/package.json /zeppelin/backend/
 RUN mkdir /zeppelin/shared
-COPY --chown=node:node shared/package.json /zeppelin/shared
+COPY --chown=node:node shared/package.json /zeppelin/shared/
 RUN mkdir /zeppelin/dashboard
-COPY --chown=node:node dashboard/package.json /zeppelin/dashboard
+COPY --chown=node:node dashboard/package.json /zeppelin/dashboard/
 
 WORKDIR /zeppelin
 RUN CI=true pnpm install
