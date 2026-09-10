@@ -17,7 +17,7 @@
     "cross-env": "^7.0.3",
     "highlight.js": "^11.8.0",
     "humanize-duration": "^3.27.0",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "^4.3.2",
     "marked": "^5.1.0",
     "moment": "^2.29.4",
     "postcss-nesting": "^13.0.1",
