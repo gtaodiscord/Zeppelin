@@ -19,7 +19,7 @@
     "humanize-duration": "^3.27.0",
     "js-yaml": "^4.1.0",
     "marked": "^5.1.0",
-    "moment": "^2.29.4",
+    "moment": "^2.31.0",
     "postcss-nesting": "^13.0.1",
     "tailwindcss": "^4.1.8",
     "vite": "npm:rolldown-vite@latest",
