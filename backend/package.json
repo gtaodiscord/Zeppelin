@@ -47,7 +47,7 @@
     "knub-command-manager": "^9.1.0",
     "lodash-es": "^4.17.21",
     "moment-timezone": "^0.5.21",
-    "multer": "^2.0.2",
+    "multer": "^2.5.0",
     "mysql2": "^3.9.8",
     "parse-color": "^1.0.0",
     "passport": "^0.6.0",
